@@ -1,0 +1,202 @@
+use std::num::*;
+
+const N: usize = 624;
+const NM1: usize = N - 1;
+const NP1: usize = N + 1;
+const M: usize = 397;
+const MM1: usize = M - 1;
+const MMN: usize = ((M as isize) - (N as isize)) as usize;
+const NMM: usize = N - M;
+const U: Wrapping<u32> = Wrapping(2147483648);
+const L: Wrapping<u32> = Wrapping(U.0 - 1);
+
+const I: u32 = 19650218;
+const J: u32 = 5489;
+
+const A: Wrapping<u32> = Wrapping(4294901760);
+const B: Wrapping<u32> = Wrapping(1812433253);
+const C: Wrapping<u32> = Wrapping(65535);
+const D: Wrapping<u32> = Wrapping(1664525);
+const E: Wrapping<u32> = Wrapping(1566083941);
+const F: [Wrapping<u32>; 2] = [Wrapping(0), Wrapping(2567483615)];
+const G: Wrapping<u32> = Wrapping(2636928640);
+const H: Wrapping<u32> = Wrapping(4022730752);
+
+const X: f32 = 4294967296.0;
+
+pub struct Random {
+    mt: [Wrapping<u32>; N],
+    i: usize,
+    last_normal: f32,
+}
+
+pub struct RandomSnapshot {
+    pub mt: [Wrapping<u32>; N],
+    pub i: usize,
+    pub last_normal: f32,
+}
+
+impl Random {
+    pub fn new(seed: u32) -> Random {
+        let mut random: Random = Random {
+            mt: [Wrapping(0); N],
+            i: NP1,
+            last_normal: 0.0,
+        };
+
+        random.seed(seed);
+
+        random
+    }
+
+    pub fn from_snapshot(snapshot: RandomSnapshot) -> Random {
+        Random {
+            mt: snapshot.mt,
+            i: snapshot.i,
+            last_normal: snapshot.last_normal,
+        }
+    }
+
+    fn init(&mut self, seed: u32) {
+        let mut a: Wrapping<u32>;
+        let mut i: usize = 1;
+
+        self.mt[0] = Wrapping(seed);
+
+        while i < N {
+            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
+
+            self.mt[i] = ((((a & A) >> 16) * B) << 16) + (a & C) * B + Wrapping(i as u32);
+
+            i += 1;
+        }
+
+        self.i = i;
+    }
+
+    fn seed(&mut self, seed: u32) {
+        let mut i: usize = 1;
+        let mut j: usize = N;
+        let mut a: Wrapping<u32>;
+
+        self.init(I);
+
+        while j != 0 {
+            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
+
+            // TODO: Initialize i w/ 0, then use `i++` here, remove it from line 97.
+
+            self.mt[i] = (self.mt[i] ^ (((((a & A) >> 16) * D) << 16) + (a & C) * D)) + Wrapping(seed);
+
+            i += 1;
+
+            if i >= N {
+                self.mt[0] = self.mt[NM1];
+
+                i = 1;
+            }
+
+            j -= 1;
+        }
+
+        j = NM1;
+
+        while j != 0 {
+            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
+
+            self.mt[i] = (self.mt[i] ^ (((((a & A) >> 16) * E) << 16) + (a & C) * E)) - Wrapping(i as u32);
+
+            i += 1;
+
+            if i >= N {
+                self.mt[0] = self.mt[NM1];
+
+                i = 1;
+            }
+
+            j -= 1;
+        }
+
+        self.mt[0] = U;
+    }
+
+    // noinspection DuplicatedCode
+    fn u32(&mut self) -> u32 {
+        let mut a: Wrapping<u32>;
+        let mut i: usize = self.i;
+        let mut j: usize = 0;
+
+        if i >= N {
+            if i == NP1 {
+                self.init(J);
+            }
+
+            while j < NMM {
+                a = (self.mt[j] & U) | (self.mt[j + 1] & L);
+
+                self.mt[j] = self.mt[j + M] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
+
+                j += 1;
+            }
+
+            while j < NM1 {
+                a = (self.mt[j] & U) | (self.mt[j + 1] & L);
+
+                self.mt[j] = self.mt[j + MMN] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
+
+                j += 1;
+            }
+
+            a = (self.mt[NM1] & U) | (self.mt[0] & L);
+
+            self.mt[NM1] = self.mt[MM1] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
+
+            i = 0;
+        }
+
+        a = self.mt[i];
+
+        i += 1;
+
+        a ^= a >> 11;
+        a ^= (a << 7) & G;
+        a ^= (a << 15) & H;
+        a ^= a >> 18;
+
+        self.i = i;
+
+        a.0
+    }
+
+    pub fn f32(&mut self) -> f32 {
+        self.u32() as f32 / X
+    }
+
+    pub fn uniform(&mut self, min: f32, max: f32) -> f32 {
+        min + self.f32() * (max - min)
+    }
+
+    pub fn normal(&mut self, min: f32, max: f32) -> f32 {
+        let mut current_normal: f32 = self.last_normal;
+
+        self.last_normal = 0.0;
+
+        if current_normal == 0.0 {
+            let a: f32 = self.f32() * 2.0 * std::f32::consts::PI;
+            let b: f32 = f32::sqrt(-2.0 * f32::ln(1.0 - self.f32()));
+
+            self.last_normal = f32::sin(a) * b;
+            current_normal = f32::cos(a) * b;
+        }
+
+        min + current_normal * max
+    }
+
+    pub fn save_snapshot(&self) -> RandomSnapshot {
+        RandomSnapshot {
+            mt: self.mt.clone(),
+            i: self.i,
+            last_normal: self.last_normal,
+        }
+    }
+}

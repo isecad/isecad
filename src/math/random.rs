@@ -30,6 +30,7 @@ pub struct Random {
     pub last_normal: f32,
 }
 
+#[allow(dead_code)]
 impl Random {
     pub fn new(seed: u32) -> Random {
         let mut random: Random = Random {

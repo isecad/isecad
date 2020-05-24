@@ -1,8 +1,8 @@
 use std::num::*;
 
-const N: usize = 624;
+pub const N: usize = 624;
+
 const NM1: usize = N - 1;
-const NP1: usize = N + 1;
 const M: usize = 397;
 const MM1: usize = M - 1;
 const MMN: usize = ((M as isize) - (N as isize)) as usize;
@@ -25,12 +25,6 @@ const H: Wrapping<u32> = Wrapping(4022730752);
 const X: f32 = 4294967296.0;
 
 pub struct Random {
-    mt: [Wrapping<u32>; N],
-    i: usize,
-    last_normal: f32,
-}
-
-pub struct RandomSnapshot {
     pub mt: [Wrapping<u32>; N],
     pub i: usize,
     pub last_normal: f32,
@@ -40,130 +34,94 @@ impl Random {
     pub fn new(seed: u32) -> Random {
         let mut random: Random = Random {
             mt: [Wrapping(0); N],
-            i: NP1,
+            i: N,
             last_normal: 0.0,
         };
 
-        random.seed(seed);
+        let mut i: usize = 1;
+
+        random.init(I);
+
+        for _ in (1..=N).rev() {
+            let a: Wrapping<u32> = random.mt[i - 1] ^ (random.mt[i - 1] >> 30);
+
+            random.mt[i] = (random.mt[i] ^ (((((a & A) >> 16) * D) << 16) + (a & C) * D)) + Wrapping(seed);
+
+            i += 1;
+
+            if i >= N {
+                random.mt[0] = random.mt[NM1];
+
+                i = 1;
+            }
+        }
+
+        for _ in (1..N).rev() {
+            let a: Wrapping<u32> = random.mt[i - 1] ^ (random.mt[i - 1] >> 30);
+
+            random.mt[i] = (random.mt[i] ^ (((((a & A) >> 16) * E) << 16) + (a & C) * E)) - Wrapping(i as u32);
+
+            i += 1;
+
+            if i >= N {
+                random.mt[0] = random.mt[NM1];
+
+                i = 1;
+            }
+        }
+
+        random.mt[0] = U;
 
         random
     }
 
-    pub fn from_snapshot(snapshot: RandomSnapshot) -> Random {
-        Random {
-            mt: snapshot.mt,
-            i: snapshot.i,
-            last_normal: snapshot.last_normal,
-        }
-    }
-
     fn init(&mut self, seed: u32) {
-        let mut a: Wrapping<u32>;
-        let mut i: usize = 1;
-
         self.mt[0] = Wrapping(seed);
 
-        while i < N {
-            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
+        for i in 1..N {
+            let a: Wrapping<u32> = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
 
             self.mt[i] = ((((a & A) >> 16) * B) << 16) + (a & C) * B + Wrapping(i as u32);
-
-            i += 1;
         }
 
-        self.i = i;
+        self.i = N;
     }
 
-    fn seed(&mut self, seed: u32) {
-        let mut i: usize = 1;
-        let mut j: usize = N;
-        let mut a: Wrapping<u32>;
-
-        self.init(I);
-
-        while j != 0 {
-            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
-
-            // TODO: Initialize i w/ 0, then use `i++` here, remove it from line 97.
-
-            self.mt[i] = (self.mt[i] ^ (((((a & A) >> 16) * D) << 16) + (a & C) * D)) + Wrapping(seed);
-
-            i += 1;
-
-            if i >= N {
-                self.mt[0] = self.mt[NM1];
-
-                i = 1;
-            }
-
-            j -= 1;
-        }
-
-        j = NM1;
-
-        while j != 0 {
-            a = self.mt[i - 1] ^ (self.mt[i - 1] >> 30);
-
-            self.mt[i] = (self.mt[i] ^ (((((a & A) >> 16) * E) << 16) + (a & C) * E)) - Wrapping(i as u32);
-
-            i += 1;
-
-            if i >= N {
-                self.mt[0] = self.mt[NM1];
-
-                i = 1;
-            }
-
-            j -= 1;
-        }
-
-        self.mt[0] = U;
-    }
-
-    // noinspection DuplicatedCode
     fn u32(&mut self) -> u32 {
-        let mut a: Wrapping<u32>;
         let mut i: usize = self.i;
-        let mut j: usize = 0;
 
         if i >= N {
-            if i == NP1 {
+            if i > N {
                 self.init(J);
             }
 
-            while j < NMM {
-                a = (self.mt[j] & U) | (self.mt[j + 1] & L);
+            for j in 0..NMM {
+                let a: Wrapping<u32> = (self.mt[j] & U) | (self.mt[j + 1] & L);
 
                 self.mt[j] = self.mt[j + M] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
-
-                j += 1;
             }
 
-            while j < NM1 {
-                a = (self.mt[j] & U) | (self.mt[j + 1] & L);
+            for j in NMM..NM1 {
+                let a: Wrapping<u32> = (self.mt[j] & U) | (self.mt[j + 1] & L);
 
                 self.mt[j] = self.mt[j + MMN] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
-
-                j += 1;
             }
 
-            a = (self.mt[NM1] & U) | (self.mt[0] & L);
+            let a: Wrapping<u32> = (self.mt[NM1] & U) | (self.mt[0] & L);
 
             self.mt[NM1] = self.mt[MM1] ^ (a >> 1) ^ F[(a.0 & 1) as usize];
 
             i = 0;
         }
 
-        a = self.mt[i];
-
-        i += 1;
+        let mut a: Wrapping<u32> = self.mt[i];
 
         a ^= a >> 11;
         a ^= (a << 7) & G;
         a ^= (a << 15) & H;
         a ^= a >> 18;
 
-        self.i = i;
+        self.i = i + 1;
 
         a.0
     }
@@ -190,13 +148,5 @@ impl Random {
         }
 
         min + current_normal * max
-    }
-
-    pub fn save_snapshot(&self) -> RandomSnapshot {
-        RandomSnapshot {
-            mt: self.mt.clone(),
-            i: self.i,
-            last_normal: self.last_normal,
-        }
     }
 }

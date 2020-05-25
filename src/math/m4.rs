@@ -155,8 +155,8 @@ impl M4 {
         self.d.w = α * d + β * h + γ * l + δ * p;
     }
 
-    pub fn to_translation_v3(&self) -> &V3 {
-        let v3 = ((self as *const M4 as usize) + std::mem::size_of::<f32>() * 12) as *const V3;
+    pub fn get_translation_v3(&self) -> &V3 {
+        let v3 = &self.d as *const V4 as usize as *const V3;
 
         unsafe { &*v3 }
     }

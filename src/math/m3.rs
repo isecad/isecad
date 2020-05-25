@@ -3,6 +3,7 @@
 use super::*;
 
 #[derive(Debug, Copy, Clone)]
+#[repr(align(64))]
 pub struct M3 {
     pub a: V3,
     pub b: V3,

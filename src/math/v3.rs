@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use super::*;
+use crate::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(align(16))]
@@ -29,10 +29,6 @@ impl V3 {
 
     pub fn unit_z() -> V3 {
         V3 { x: 0.0, y: 0.0, z: 1.0 }
-    }
-
-    pub fn empty() -> V3 {
-        V3 { x: 0.0, y: 0.0, z: 0.0 }
     }
 
     pub fn reset(&mut self) {
@@ -152,5 +148,11 @@ impl V3 {
             result.c.x = xzvθ   - ysθ; result.c.y = yzvθ   + xsθ; result.c.z = cθ + z * z * vθ;  result.c.w =  0.0;
             result.d.x = 0.0;          result.d.y = 0.0;          result.d.z = 0.0;              result.d.w =  1.0;
         }
+    }
+}
+
+impl Zero<V3> for V3 {
+    fn zero() -> V3 {
+        V3 { x: 0.0, y: 0.0, z: 0.0 }
     }
 }

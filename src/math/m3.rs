@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use super::*;
+use crate::*;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(align(64))]
@@ -16,14 +16,6 @@ impl M3 {
             a: V3::new(a, b, c),
             b: V3::new(d, e, f),
             c: V3::new(g, h, i),
-        }
-    }
-
-    pub fn empty() -> M3 {
-        M3 {
-            a: V3::empty(),
-            b: V3::empty(),
-            c: V3::empty(),
         }
     }
 
@@ -100,5 +92,15 @@ impl M3 {
         self.c.x = α * a + β * d + γ * g;
         self.c.y = α * b + β * e + γ * h;
         self.c.z = α * c + β * f + γ * i;
+    }
+}
+
+impl Zero<M3> for M3 {
+    fn zero() -> M3 {
+        M3 {
+            a: V3::zero(),
+            b: V3::zero(),
+            c: V3::zero(),
+        }
     }
 }

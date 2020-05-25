@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use super::*;
+use crate::*;
 
 #[derive(Debug, Copy, Clone)]
 pub struct M4 {
@@ -17,15 +17,6 @@ impl M4 {
             b: V4::new(e, f, g, h),
             c: V4::new(i, j, k, l),
             d: V4::new(m, n, o, p),
-        }
-    }
-
-    pub fn empty() -> M4 {
-        M4 {
-            a: V4::empty(),
-            b: V4::empty(),
-            c: V4::empty(),
-            d: V4::empty(),
         }
     }
 
@@ -161,5 +152,16 @@ impl M4 {
         let v3 = &self.d as *const V4 as usize as *const V3;
 
         unsafe { &*v3 }
+    }
+}
+
+impl Zero<M4> for M4 {
+    fn zero() -> M4 {
+        M4 {
+            a: V4::zero(),
+            b: V4::zero(),
+            c: V4::zero(),
+            d: V4::zero(),
+        }
     }
 }

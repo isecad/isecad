@@ -1,12 +1,14 @@
+#![allow(dead_code)]
+
 use super::*;
 
+#[derive(Debug, Copy, Clone)]
 pub struct V3 {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
-#[allow(dead_code)]
 impl V3 {
     pub const UNIT_X: V3 = V3 { x: 1.0, y: 0.0, z: 0.0 };
     pub const UNIT_Y: V3 = V3 { x: 0.0, y: 1.0, z: 0.0 };

@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+
+#[derive(Debug, Copy, Clone)]
 pub struct V4 {
     pub x: f32,
     pub y: f32,
@@ -5,7 +8,6 @@ pub struct V4 {
     pub w: f32,
 }
 
-#[allow(dead_code)]
 impl V4 {
     pub fn new(x: f32, y: f32, z: f32, w: f32) -> V4 {
         V4 { x, y, z, w }

@@ -1,12 +1,14 @@
+#![allow(dead_code)]
+
 use super::*;
 
+#[derive(Debug, Copy, Clone)]
 pub struct M3 {
     pub a: V3,
     pub b: V3,
     pub c: V3,
 }
 
-#[allow(dead_code)]
 impl M3 {
     pub fn new(a: f32, b: f32, c: f32, d: f32, e: f32, f: f32, g: f32, h: f32, i: f32) -> M3 {
         M3 {

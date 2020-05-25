@@ -1,5 +1,8 @@
+#![allow(dead_code)]
+
 use super::*;
 
+#[derive(Debug, Copy, Clone)]
 pub struct M4 {
     pub a: V4,
     pub b: V4,
@@ -7,7 +10,6 @@ pub struct M4 {
     pub d: V4,
 }
 
-#[allow(dead_code)]
 impl M4 {
     pub fn new(a: f32, b: f32, c: f32, d: f32, e: f32, f: f32, g: f32, h: f32, i: f32, j: f32, k: f32, l: f32, m: f32, n: f32, o: f32, p: f32) -> M4 {
         M4 {

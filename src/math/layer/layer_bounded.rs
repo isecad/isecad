@@ -12,13 +12,13 @@ impl<T: PartialOrd + Bounded> LayerBounded<T> for [T] {
         let mut min = T::MAX_BOUND;
         let mut max = T::MIN_BOUND;
 
-        for i in self {
-            if *i < min {
-                min = *i;
+        for &i in self {
+            if i < min {
+                min = i;
             }
 
-            if *i > max {
-                max = *i;
+            if i > max {
+                max = i;
             }
         }
 

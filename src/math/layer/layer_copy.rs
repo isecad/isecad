@@ -25,8 +25,8 @@ pub trait LayerCopy<T> {
 
 impl<T: Copy> LayerCopy<T> for [T] {
     fn copy_from_slice_by_mapping(&mut self, mapping: &[usize], from: &Self) {
-        for (i, j) in mapping.iter().enumerate() {
-            self[i] = from[*j];
+        for (i, &j) in mapping.iter().enumerate() {
+            self[i] = from[j];
         }
     }
 }

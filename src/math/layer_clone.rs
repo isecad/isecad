@@ -20,7 +20,7 @@ pub trait LayerClone<T: Clone> {
     /// # Arguments
     ///
     /// -   `self` — $S$ — the target layer.
-    /// -   `indices` — $M$ — the mapping layer.
+    /// -   `mapping` — $M$ — the mapping layer.
     /// -   `from` — $F$ — the source layer to clone items from.
     fn clone_from_slice_by_mapping(&mut self, mapping: &[usize], from: &Self);
 }

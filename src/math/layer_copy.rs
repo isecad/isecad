@@ -18,7 +18,7 @@ pub trait LayerCopy<T: Clone> {
     /// # Arguments
     ///
     /// -   `self` — $S$ — the target layer.
-    /// -   `indices` — $M$ — the mapping layer.
+    /// -   `mapping` — $M$ — the mapping layer.
     /// -   `from` — $F$ — the source layer to copy items from.
     fn copy_from_slice_by_mapping(&mut self, mapping: &[usize], from: &Self);
 }

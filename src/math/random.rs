@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use std::collections::hash_map::*;
+use std::fmt::*;
+use std::hash::*;
 use std::num::*;
 
 pub const N: usize = 624;
@@ -26,10 +29,28 @@ const H: Wrapping<u32> = Wrapping(4022730752);
 
 const X: f32 = 4294967296.0;
 
+#[derive(Clone)]
 pub struct Random {
     pub mt: [Wrapping<u32>; N],
     pub i: usize,
     pub last_normal: f32,
+}
+
+impl Debug for Random {
+    /// Instead of showing contents of the [`Random::mt`], it shows its hash.
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        let mut hash = DefaultHasher::new();
+
+        self.mt.hash(&mut hash);
+
+        let hash = hash.finish();
+
+        fmt.debug_struct("Random")
+            .field("mt", &hash)
+            .field("i", &self.i)
+            .field("last_normal", &self.last_normal)
+            .finish()
+    }
 }
 
 impl Random {

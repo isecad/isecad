@@ -9,8 +9,8 @@ pub trait LayerBounded<T> {
 
 impl<T: PartialOrd + Bounded> LayerBounded<T> for [T] {
     fn min_max(&self) -> (T, T) {
-        let mut min = T::MAX_BOUND;
-        let mut max = T::MIN_BOUND;
+        let mut min: Self = T::MAX_BOUND;
+        let mut max: Self = T::MIN_BOUND;
 
         for &i in self {
             if i < min {

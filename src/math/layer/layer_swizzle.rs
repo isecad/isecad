@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-pub trait LayerCopy<T> {
+pub trait LayerSwizzle<T> {
     /// For each $M_i$ in the $M$, it takes $S_{F_i}$, and copies it to $S_i$.
     ///
     /// Each $M_i \in [0, L_F)$, where $L_F$ is the length of the $F$.
@@ -20,11 +20,11 @@ pub trait LayerCopy<T> {
     /// -   `self` — $S$ — the target layer.
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `from` — $F$ — the source layer to copy items from.
-    fn copy_from_slice_by_mapping(&mut self, mapping: &[usize], from: &Self);
+    fn swizzle(&mut self, mapping: &[usize], from: &Self);
 }
 
-impl<T: Copy> LayerCopy<T> for [T] {
-    fn copy_from_slice_by_mapping(&mut self, mapping: &[usize], from: &Self) {
+impl<T: Copy> LayerSwizzle<T> for [T] {
+    fn swizzle(&mut self, mapping: &[usize], from: &Self) {
         for (i, &j) in mapping.iter().enumerate() {
             self[i] = from[j];
         }

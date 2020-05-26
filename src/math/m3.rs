@@ -2,7 +2,7 @@
 
 use crate::*;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(align(64))]
 pub struct M3 {
     pub a: V3,
@@ -92,15 +92,5 @@ impl M3 {
         self.c.x = α * a + β * d + γ * g;
         self.c.y = α * b + β * e + γ * h;
         self.c.z = α * c + β * f + γ * i;
-    }
-}
-
-impl Zero<M3> for M3 {
-    fn zero() -> M3 {
-        M3 {
-            a: V3::zero(),
-            b: V3::zero(),
-            c: V3::zero(),
-        }
     }
 }

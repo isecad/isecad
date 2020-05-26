@@ -2,7 +2,7 @@
 
 use crate::*;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct M4 {
     pub a: V4,
     pub b: V4,
@@ -152,16 +152,5 @@ impl M4 {
         let v3 = &self.d as *const V4 as usize as *const V3;
 
         unsafe { &*v3 }
-    }
-}
-
-impl Zero<M4> for M4 {
-    fn zero() -> M4 {
-        M4 {
-            a: V4::zero(),
-            b: V4::zero(),
-            c: V4::zero(),
-            d: V4::zero(),
-        }
     }
 }

@@ -2,7 +2,7 @@
 
 use crate::*;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 #[repr(align(16))]
 pub struct V3 {
     pub x: f32,
@@ -148,11 +148,5 @@ impl V3 {
             result.c.x = xzvθ   - ysθ; result.c.y = yzvθ   + xsθ; result.c.z = cθ + z * z * vθ;  result.c.w =  0.0;
             result.d.x = 0.0;          result.d.y = 0.0;          result.d.z = 0.0;              result.d.w =  1.0;
         }
-    }
-}
-
-impl Zero<V3> for V3 {
-    fn zero() -> V3 {
-        V3 { x: 0.0, y: 0.0, z: 0.0 }
     }
 }

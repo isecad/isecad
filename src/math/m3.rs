@@ -2,6 +2,7 @@
 
 use crate::*;
 
+/// A 3×3 matrix; aligned to 64 bytes to be binary compatible with the [`M4`].
 #[derive(Debug, Copy, Clone, Default)]
 #[repr(align(64))]
 pub struct M3 {

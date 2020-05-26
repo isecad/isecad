@@ -2,6 +2,7 @@
 
 use crate::*;
 
+/// A 3D vector; aligned to 16 bytes to simplify `v128.load` operations on it, and to be binary compatible with the [`V4`].
 #[derive(Debug, Copy, Clone, Default)]
 #[repr(align(16))]
 pub struct V3 {

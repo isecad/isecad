@@ -140,4 +140,4 @@
     **TODO:** Investigate average hit rate of this function. Or don’t. Even with
     low hit rate, it probably will not impact performance significantly.
 
-_TBC_
+[![To Be Continued](https://img.youtube.com/vi/TEYG1ZXU2Pc/0.jpg)](https://youtu.be/TEYG1ZXU2Pc)

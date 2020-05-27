@@ -124,7 +124,7 @@
 
     **TODO:** Investigate average hit rate of this function.
 
--   _inverse_swizzle_add_ — adds values from one layer to existing values in
+-   _inverse swizzle add_ — adds values from one layer to existing values in
     other layer using indices mapping from a supplementary usize layer.
 
     **Usage:** One indirect usage in the lithosphere model.
@@ -137,7 +137,9 @@
 
     **Other implementations:** _None._
 
-    **TODO:** Investigate average hit rate of this function. Or don’t. Even with
-    low hit rate, it probably will not impact performance significantly.
+    **TODO:** Investigate average hit rate of this function? Even with low hit
+    rate, it probably will not impact performance significantly. However, if hit
+    rate optimization will be possible for the previous function, most probably
+    these changes will be straightforwardly applicable to this function as well.
 
 [![To Be Continued](https://img.youtube.com/vi/TEYG1ZXU2Pc/0.jpg)](https://youtu.be/TEYG1ZXU2Pc)

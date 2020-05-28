@@ -219,6 +219,30 @@ $[0, 1)$, or $(0, 1]$, IDK.
     consisting of floats, i.e., F32 layer, V3 layer; also may be implemented for
     integer layers, but it probably will be useless.
 
+## Raster graphics
+
+### _copy into selection_
+
+Copies data from one F32 layer to another using a selection Bool layer.
+
+-   **Usage:** Few usages in crust and lithosphere simulation.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** Any layer of type implementing `Copy`.
+
+### _fill into selection_
+
+Fills an F32 layer area with given value.
+
+-   **Usage:** Few usages in crust, hydrosphere, and lithosphere simulation.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** U8 layer.
+-   **Possible implementations:** Any layer of type implementing `Copy`.
+
 # U8 layer
 
 ## Core functionality
@@ -298,11 +322,26 @@ Returns an array of unique values of a U8 layer.
     `Hash`. `Hash`? `Copy`? Investigate how to implement this in Rust most
     efficiently.
 
+## Raster graphics
+
+### _fill into selection_
+
+Fills a U8 layer area with given value.
+
+-   **Usage:** Few usages in tectonics and lithosphere simulation.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** F32 layer.
+-   **Possible implementations:** Any layer of type implementing `Copy`.
+
 # Usize layer
 
 ## Core functionality
 
 ## Statistics
+
+## Raster graphics
 
 # V3 layer
 
@@ -373,6 +412,24 @@ Bool layer, not an F32 layer or U8 layer.
 -   **Other implementations:** _None._
 -   **Possible implementations:** Any layer of type implementing `Sum`,
     `Div<f32>`, `Mul<f32>`, and `Copy`.
+
+## Raster graphics
+
+### _flood select_
+
+Selects an area of a V3 layer using flood fill. Also, uses a neighbor lookup
+table from given grid.
+
+-   **Usage:** One usage in tectonics.
+-   **Frequency of the hottest usages:** Once per supercontinent cycle.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** We may introduce a trait, say, `Similarity`,
+    and then implement this function for any layer implementing this trait.
+-   **TODO:** Investigate hit rate of this function, or… Even with extremely low
+    hit rate, this function will not significantly affect performance of a
+    simulation.
 
 # _TBC_
 

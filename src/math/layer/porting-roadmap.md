@@ -4,7 +4,7 @@
 
 ### _from example_
 
-Creates new fF32 layer of the same length as given layer, _and with the same
+Creates new F32 layer of the same length as given layer, _and with the same
 associated grid_.
 
 -   **Usage:** Unknown.

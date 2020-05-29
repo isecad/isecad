@@ -1243,6 +1243,223 @@ IDK WTF is this, original says it probably should be moved right to the grid.
 
 ### Misc
 
+# Primitives
+
+## V3
+
+### _add v3_
+
+Adds another v3 to the source v3.
+
+Writes result to the source v3.
+
+-   **Usage:** Few usages in Voronoi; inline usages in V3 layer field
+    operations.
+-   **Frequency of the hottest usages:** Few times per simulation.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4, M3, M4.
+
+### _dot mul v3_
+
+Calculates dot product of two v3s.
+
+Writes result to the source v3.
+
+-   **Usage:** Few usages in Voronoi, inline usages in V3 layer field
+    operations.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4.
+
+### _mul m3_
+
+Multiplies a v3 by an m3.
+
+Writes result to the source v3.
+
+-   **Usage:** No usages; inline usages in V3 layer field operations.
+-   **Frequency of the hottest usages:** No usages.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4, M3.
+
+### _div scalar_
+
+Divides a v3 by a scalar.
+
+Writes result to the source v3.
+
+-   **Usage:** No usages; inline usage in _normalize_ and V3 layer field
+    operations.
+-   **Frequency of the hottest usages:** No usages.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4, M3, M4.
+
+### _similarity_
+
+Calculates similarity measure of two v3s.
+
+-   **Usage:** One usage in V3 layer flood fill.
+-   **Frequency of the hottest usages:** Multiple times per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4. M3, M4?
+
+### _magnitude_
+
+Calculates magnitude of a v3.
+
+-   **Usage:** Usages in optics and visualization, indirect usage in tectonics,
+    multiple inline usages.
+-   **Frequency of the hottest usages:** At least few times per plate per
+    iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4.
+
+### _normalize_
+
+Normalizes a v3.
+
+Writes result to other vector.
+
+-   **Usage:** Usages in visualization, indirect usage in tectonics.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** V4.
+
+### _to rotation m3_
+
+Creates a rotation m3 from a rotation v3.
+
+Writes result to other m3.
+
+-   **Usage:** Usages in tectonics.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** _N/A._
+
+### _to rotation m4_
+
+Creates a rotation m4 from a rotation v3.
+
+Writes result to other m4.
+
+-   **Usage:** Usages in orbital mechanics.
+-   **Frequency of the hottest usages:** At least few times per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** _N/A._
+
+### _to translation m4_
+
+Creates a translation m4 from a translation v3.
+
+Writes result to other m4.
+
+-   **Usage:** Usages in orbital mechanics.
+-   **Frequency of the hottest usages:** At least few times per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** _None._
+-   **Possible implementations:** _N/A._
+
+## V4
+
+## M3
+
+### _determinant_
+
+Calculates a determinant of an m3.
+
+-   **Usage:** Indirect usages in plate via inline usage in _invert_.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M4.
+-   **Possible implementations:** _N/A._
+
+### _invert_
+
+Inverts an m3.
+
+Writes result to other m3.
+
+-   **Usage:** Usages in plate.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M4.
+-   **Possible implementations:** _N/A._
+
+### _mul_
+
+Multiplies one m3 by another.
+
+Writes result to first m3.
+
+-   **Usage:** Usages in tectonics and plate.
+-   **Frequency of the hottest usages:** Few times per plate per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M4.
+-   **Possible implementations:** _N/A._
+
+## M4
+
+### _determinant_
+
+Calculates a determinant of an m4.
+
+-   **Usage:** Indirect usages in orbital mechanics via inline usage in
+    _invert_.
+-   **Frequency of the hottest usages:** Few times per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M3.
+-   **Possible implementations:** _N/A._
+
+### _invert_
+
+Inverts an m4.
+
+Writes result to other m4.
+
+-   **Usage:** Usages in orbital mechanics.
+-   **Frequency of the hottest usages:** Few times per iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M3.
+-   **Possible implementations:** _N/A._
+
+### _mul_
+
+Multiplies one m4 by another.
+
+Writes result to other m4.
+
+-   **Usage:** Usages in orbital mechanics and celestial cycle.
+-   **Frequency of the hottest usages:** Few times per celestial cycle per
+    iteration.
+-   **Conclusion:** Keep.
+-   **Status:** Unimplemented.
+-   **Other implementations:** M3.
+-   **Possible implementations:** _N/A._
+
 # _TBC_
 
 [![To Be Continued](https://img.youtube.com/vi/TEYG1ZXU2Pc/0.jpg)](https://youtu.be/TEYG1ZXU2Pc)

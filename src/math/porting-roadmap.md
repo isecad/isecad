@@ -1257,23 +1257,21 @@ Writes result to the source v3.
     operations.
 -   **Frequency of the hottest usages:** Few times per simulation.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure; as `Add`).
 -   **Other implementations:** _None._
--   **Possible implementations:** V4, M3, M4.
+-   **Possible implementations:** ~~V4, M3, M4~~.
 
 ### _dot mul v3_
 
 Calculates dot product of two v3s.
 
-Writes result to the source v3.
-
 -   **Usage:** Few usages in Voronoi, inline usages in V3 layer field
     operations.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented.
 -   **Other implementations:** _None._
--   **Possible implementations:** V4.
+-   **Possible implementations:** ~~V4.~~
 
 ### _mul m3_
 
@@ -1284,9 +1282,9 @@ Writes result to the source v3.
 -   **Usage:** No usages; inline usages in V3 layer field operations.
 -   **Frequency of the hottest usages:** No usages.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure; as `Mul`).
 -   **Other implementations:** _None._
--   **Possible implementations:** V4, M3.
+-   **Possible implementations:** ~~M3.~~
 
 ### _div scalar_
 
@@ -1298,9 +1296,9 @@ Writes result to the source v3.
     operations.
 -   **Frequency of the hottest usages:** No usages.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure; as `Div`).
 -   **Other implementations:** _None._
--   **Possible implementations:** V4, M3, M4.
+-   **Possible implementations:** ~~V4, M3, M4.~~
 
 ### _similarity_
 
@@ -1309,9 +1307,9 @@ Calculates similarity measure of two v3s.
 -   **Usage:** One usage in V3 layer flood fill.
 -   **Frequency of the hottest usages:** Multiple times per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented.
 -   **Other implementations:** _None._
--   **Possible implementations:** V4. M3, M4?
+-   **Possible implementations:** ~~V4. M3, M4?~~
 
 ### _magnitude_
 
@@ -1322,9 +1320,9 @@ Calculates magnitude of a v3.
 -   **Frequency of the hottest usages:** At least few times per plate per
     iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented.
 -   **Other implementations:** _None._
--   **Possible implementations:** V4.
+-   **Possible implementations:** ~~V4.~~
 
 ### _normalize_
 
@@ -1335,9 +1333,9 @@ Writes result to other vector.
 -   **Usage:** Usages in visualization, indirect usage in tectonics.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure).
 -   **Other implementations:** _None._
--   **Possible implementations:** V4.
+-   **Possible implementations:** ~~V4.~~
 
 ### _to rotation m3_
 
@@ -1348,7 +1346,7 @@ Writes result to other m3.
 -   **Usage:** Usages in tectonics.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure).
 -   **Other implementations:** _None._
 -   **Possible implementations:** _N/A._
 
@@ -1361,7 +1359,7 @@ Writes result to other m4.
 -   **Usage:** Usages in orbital mechanics.
 -   **Frequency of the hottest usages:** At least few times per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure).
 -   **Other implementations:** _None._
 -   **Possible implementations:** _N/A._
 
@@ -1374,24 +1372,13 @@ Writes result to other m4.
 -   **Usage:** Usages in orbital mechanics.
 -   **Frequency of the hottest usages:** At least few times per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented (pure).
 -   **Other implementations:** _None._
 -   **Possible implementations:** _N/A._
 
 ## V4
 
 ## M3
-
-### _determinant_
-
-Calculates a determinant of an m3.
-
--   **Usage:** Indirect usages in plate via inline usage in _invert_.
--   **Frequency of the hottest usages:** Few times per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M4.
--   **Possible implementations:** _N/A._
 
 ### _invert_
 
@@ -1402,8 +1389,8 @@ Writes result to other m3.
 -   **Usage:** Usages in plate.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M4.
+-   **Status:** Implemented (pure).
+-   **Other implementations:** ~~M4.~~
 -   **Possible implementations:** _N/A._
 
 ### _mul_
@@ -1415,23 +1402,11 @@ Writes result to first m3.
 -   **Usage:** Usages in tectonics and plate.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M4.
+-   **Status:** Implemented.
+-   **Other implementations:** ~~M4.~~
 -   **Possible implementations:** _N/A._
 
 ## M4
-
-### _determinant_
-
-Calculates a determinant of an m4.
-
--   **Usage:** Indirect usages in orbital mechanics via inline usage in
-    _invert_.
--   **Frequency of the hottest usages:** Few times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M3.
--   **Possible implementations:** _N/A._
 
 ### _invert_
 
@@ -1442,8 +1417,8 @@ Writes result to other m4.
 -   **Usage:** Usages in orbital mechanics.
 -   **Frequency of the hottest usages:** Few times per iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M3.
+-   **Status:** Implemented (pure).
+-   **Other implementations:** ~~M3.~~
 -   **Possible implementations:** _N/A._
 
 ### _mul_
@@ -1456,8 +1431,8 @@ Writes result to other m4.
 -   **Frequency of the hottest usages:** Few times per celestial cycle per
     iteration.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** M3.
+-   **Status:** Implemented.
+-   **Other implementations:** ~~M3.~~
 -   **Possible implementations:** _N/A._
 
 # _TBC_

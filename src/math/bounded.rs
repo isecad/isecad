@@ -1,4 +1,4 @@
-pub trait Bounded: Copy {
+pub trait Bounded {
     const MIN_BOUND: Self;
     const MAX_BOUND: Self;
 }

@@ -4,7 +4,7 @@
 
 ### Core functionality
 
-#### _from example_
+#### ~~_from example `&Layer → F32 layer`_~~
 
 Creates new F32 layer of the same length as given layer, _and with the same
 associated grid_.
@@ -19,7 +19,7 @@ associated grid_.
 -   **Other implementations:** _None._
 -   **Possible implementations:** Any layer of type implementing `Default`.
 
-#### _of length_
+#### ~~_of length `usize → F32 layer`_~~
 
 Creates new F32 layer of given length, _and with a given associated grid with_,
 where given length may be unequal to length of a grid.
@@ -27,12 +27,11 @@ where given length may be unequal to length of a grid.
 -   **Usage:** Unknown.
 -   **Frequency of the hottest usages:** Twice per plate per iteration.
 -   **Conclusion:** Probably useless. See previous conclusion.
--   **Status:** Unimplemented; probably implemented in the Rust library, or may
-    be implemented as a one-liner.
+-   **Status:** Implemented as `of_length :: usize → Box<Self>`.
 -   **Other implementations:** V3 layer.
 -   **Possible implementations:** Any layer of type implementing `Default`.
 
-#### _from u8 layer_
+#### _from u8 layer `&U8 layer → &mut F32 layer → ()`_
 
 Creates new F32 layer of the same length as given U8 layer, with the same data
 as in given layer, _and with the same associated grid_.
@@ -49,7 +48,7 @@ as in given layer, _and with the same associated grid_.
 -   **TODO:** Investigate whether U8 layers required to convert to F32 layers
     may be safely replaced with F32 layers internally.
 
-#### _from buffer_
+#### _from buffer `&ArrayBuffer → usize → F32 layer`_
 
 Creates new F32 layer from raw array buffer at the given offset, and of the same
 length as given grid.
@@ -63,7 +62,7 @@ length as given grid.
 -   **Other implementations:** U8 layer.
 -   **Possible implementations:** _N/A._
 
-#### _copy_
+#### _copy `&F32 layer → &mut F32 layer → ()`_
 
 Copies data from one layer to another.
 
@@ -76,7 +75,7 @@ Copies data from one layer to another.
 -   **TODO:** Make sure whether the existing implementation uses WASM
     `memory.copy`; probably we will need to reimplement it on our side.
 
-#### _fill_
+#### _fill `&mut F32 layer → f32 → ()`_
 
 Fills a layer with given value.
 
@@ -92,7 +91,7 @@ Fills a layer with given value.
     `memory.fill`; probably we will need to reimplement it on our side.
 -   **Note:** May be straightforwardly parallelized.
 
-#### _max index_
+#### ~~_max index `&F32 layer → usize`_~~
 
 Returns an index of an element with max value.
 
@@ -100,12 +99,12 @@ Returns an index of an element with max value.
 -   **Frequency of the hottest usages:** Multiple times per supercontinent
     cycle.
 -   **Conclusion:** Keep.
--   **Status:** Unimplemented.
+-   **Status:** Implemented as `min_max_indices :: &self → (usize, usize)`.
 -   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Ord` or
-    `PartialOrd`.
+-   **Possible implementations:** ~~Any layer of type implementing `Ord` or
+    `PartialOrd`.~~
 
-#### _swizzle_
+#### ~~_swizzle `&F32 layer → &Usize layer → &mut F32 layer → ()`_~~
 
 Copies data from one layer to another using indices mapping from a supplementary
 Usize layer.
@@ -121,7 +120,7 @@ Usize layer.
 -   **TODO:** Investigate average hit rate of this function.
 -   **Note:** Probably, May be straightforwardly parallelized.
 
-#### _inverse swizzle add_
+#### ~~_inverse swizzle add_~~
 
 Add values from one layer to existing values in other layer using indices
 mapping from a supplementary Usize layer.
@@ -143,7 +142,7 @@ mapping from a supplementary Usize layer.
 
 ### Statistics
 
-#### _min max_
+#### ~~_min max_~~
 
 Returns a tuple of minimum and maximum values of an F32 layer.
 

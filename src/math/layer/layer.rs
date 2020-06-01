@@ -4,36 +4,34 @@ use crate::*;
 use std::cmp::*;
 
 pub trait Layer<T> {
-    fn min_max(&self) -> (T, T);
+    // region Core functionality
+    /// Creates new layer of specified length.
+    fn of_length(length: usize) -> Box<Self>
+    where
+        T: Default;
 
-    /// For each $M_i$ in the $M$, it takes $F_{M_i}$, and copies it to $S_i$.
+    /// $O_i = S_{M_i}$
     ///
-    /// Each $M_i \in [0, L_F)$, where $L_F$ is the length of the $F$.
-    ///
-    /// $L_M <= L_S, L_M <= L_F$, where $L_M$ it the length of the $M$, $L_S$ is the length of the $S$.
-    ///
-    /// | $F$           | $M$                       | $S$    |
-    /// | :-----------: | :-----------------------: | :----: |
-    /// | $8$           | $4$ — from $F_4$ to $S_0$ | $1$    |
-    /// | $\varnothing$ | $2$ — from $F_2$ to $S_1$ | $4$    |
-    /// | $4$           | $0$ — from $F_0$ to $S_2$ | $8$    |
-    /// | $8$           | $3$ — from $F_3$ to $S_3$ | $8$    |
-    /// | $1$           |                           |        |
+    /// | $S$                 | $M$                             | $O$             |
+    /// | :-----------------: | :-----------------------------: | :-------------: |
+    /// | $S_0 = 8$           | $M_0 = 4$ — from $S_4$ to $O_0$ | $O_0 = S_4 = 1$ |
+    /// | $S_1 = \varnothing$ | $M_1 = 2$ — from $S_2$ to $O_1$ | $O_1 = S_2 = 4$ |
+    /// | $S_2 = 4$           | $M_2 = 0$ — from $S_0$ to $O_2$ | $O_2 = S_0 = 8$ |
+    /// | $S_3 = 8$           | $M_3 = 3$ — from $S_3$ to $O_3$ | $O_3 = S_3 = 8$ |
+    /// | $S_4 = 1$           |                                 |                 |
     ///
     /// # Arguments
     ///
-    /// -   `self` — $S$ — the target layer.
+    /// -   `self` — $S$ — the source layer to copy items from.
     /// -   `mapping` — $M$ — the mapping layer.
-    /// -   `from` — $F$ — the source layer to copy items from.
-    fn swizzle(&mut self, mapping: &[usize], from: &Self);
+    /// -   `output` — $O$ — the output layer to copy items into.
+    fn swizzle(&self, mapping: &[usize], output: &mut Self)
+    where
+        T: Copy;
 
-    /// For each $M_i$ in the $M$, it takes $F_i$, and adds it to $S_{M_i}$.
+    /// $O_{M_i} = S_{M_i} + A_i$
     ///
-    /// Each $M_i \in [0, L_S)$, where $L_S$ is the length of the $S$.
-    ///
-    /// $L_M <= L_F, L_M <= L_S$, where $L_M$ it the length of the $M$, $L_F$ is the length of the $F$.
-    ///
-    /// | $S$    | $M$    | $F$    | $S$         |
+    /// | $S$    | $M$    | $A$    | $O$         |
     /// | :----: | :----: | :----: | :--------:  |
     /// | $1$    | $1$    | $2$    | $1$         |
     /// | $2$    | $4$    | $-9$   | $4 = 2 + 2$ |
@@ -45,37 +43,102 @@ pub trait Layer<T> {
     ///
     /// -   `self` — $S$ — the source layer.
     /// -   `mapping` — $M$ — the mapping layer.
-    /// -   `from` — $F$ — the layer to add values to $S$ from.
-    fn inverse_swizzle_add(&mut self, mapping: &[usize], from: &Self);
+    /// -   `add` — $A$ — the layer of values to add to the $S$ values.
+    /// -   `output` — $O$ — the output layer to write result into.
+    fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
+    where
+        T: Copy + std::ops::Add<Output = T>;
+    // endregion Core functionality
+
+    // region Statistics
+    /// Returns min and max values of layer at once.
+    fn min_max(&self) -> (T, T)
+    where
+        T: Copy + PartialOrd + Bounded;
+
+    /// Returns indices of elements with min and max values.
+    fn min_max_indices(&self) -> (usize, usize)
+    where
+        T: Copy + PartialOrd + Bounded;
+    // endregion Statistics
 }
 
-impl<T: PartialOrd + Bounded> Layer<T> for [T] {
-    fn min_max(&self) -> (T, T) {
-        let mut min: Self = T::MAX_BOUND;
-        let mut max: Self = T::MIN_BOUND;
+impl<T> Layer<T> for [T] {
+    // region Core functionality
+    fn of_length(length: usize) -> Box<Self>
+    where
+        T: Default,
+    {
+        let mut vec = Vec::<T>::with_capacity(length);
 
-        for &i in self {
-            if i < min {
-                min = i;
+        vec.resize_with(length, Default::default);
+
+        vec.into_boxed_slice()
+    }
+
+    fn swizzle(&self, mapping: &[usize], output: &mut Self)
+    where
+        T: Copy,
+    {
+        for (i, &m_i) in mapping.iter().enumerate() {
+            output[i] = self[m_i];
+        }
+    }
+
+    fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
+    where
+        T: Copy + std::ops::Add<Output = T>,
+    {
+        for (i, &m_i) in mapping.iter().enumerate() {
+            output[m_i] = self[m_i] + add[i];
+        }
+    }
+    // endregion Core functionality
+
+    // region Statistics
+    fn min_max(&self) -> (T, T)
+    where
+        T: Copy + PartialOrd + Bounded,
+    {
+        let mut min = Bounded::MAX_BOUND;
+        let mut max = Bounded::MIN_BOUND;
+
+        for &s_i in self {
+            if s_i < min {
+                min = s_i;
             }
 
-            if i > max {
-                max = i;
+            if s_i > max {
+                max = s_i;
             }
         }
 
         (min, max)
     }
 
-    fn swizzle(&mut self, mapping: &[usize], from: &Self) {
-        for (i, &m_i) in mapping.iter().enumerate() {
-            self[i] = from[m_i];
-        }
-    }
+    fn min_max_indices(&self) -> (usize, usize)
+    where
+        T: Copy + PartialOrd + Bounded,
+    {
+        let mut min = Bounded::MAX_BOUND;
+        let mut max = Bounded::MIN_BOUND;
 
-    fn inverse_swizzle_add(&mut self, mapping: &[usize], from: &Self) {
-        for (i, &m_i) in mapping.iter().enumerate() {
-            self[m_i] += from[i];
+        let mut max_index = 0;
+        let mut min_index = 0;
+
+        for (i, &s_i) in self.iter().enumerate() {
+            if s_i < min {
+                min = s_i;
+                min_index = i;
+            }
+
+            if s_i > max {
+                max = s_i;
+                max_index = i;
+            }
         }
+
+        (min_index, max_index)
     }
+    // endregion Statistics
 }

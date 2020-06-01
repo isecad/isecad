@@ -19,24 +19,13 @@ impl From<[f32; 3]> for V3 {
     }
 }
 
-impl From<(f32, f32, f32)> for V3 {
-    fn from((x, y, z): (f32, f32, f32)) -> Self {
-        Self { x, y, z }
-    }
-}
-
 impl Into<[f32; 3]> for V3 {
     fn into(self) -> [f32; 3] {
         [self.x, self.y, self.z]
     }
 }
 
-impl Into<(f32, f32, f32)> for V3 {
-    fn into(self) -> (f32, f32, f32) {
-        (self.x, self.y, self.z)
-    }
-}
-
+/// Vector negation.
 impl std::ops::Neg for V3 {
     type Output = Self;
 
@@ -49,210 +38,240 @@ impl std::ops::Neg for V3 {
     }
 }
 
+/// Vector addition.
 impl std::ops::Add for V3 {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
         }
     }
 }
 
+/// Vector addition with assignment.
 impl std::ops::AddAssign for V3 {
     fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
+        *self = *self + rhs;
     }
 }
 
+/// Vector subtraction.
 impl std::ops::Sub for V3 {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
         }
     }
 }
 
+/// Vector subtraction with assignment.
 impl std::ops::SubAssign for V3 {
     fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs
+        *self = *self - rhs;
     }
 }
 
+/// Vector multiplication by scalar.
 impl std::ops::Mul<f32> for V3 {
     type Output = Self;
 
-    fn mul(self, scalar: f32) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Self {
-            x: self.x * scalar,
-            y: self.y * scalar,
-            z: self.z * scalar,
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
         }
     }
 }
 
+/// Vector multiplication by scalar with assignment.
 impl std::ops::MulAssign<f32> for V3 {
-    fn mul_assign(&mut self, scalar: f32) {
-        *self = *self * scalar
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }
 
+/// Vector multiplication by M3.
+impl std::ops::Mul<M3> for V3 {
+    type Output = Self;
+
+    fn mul(self, rhs: M3) -> Self::Output {
+        let Self { x, y, z } = self;
+
+        Self {
+            x: rhs.a.x * x + rhs.b.x * y + rhs.c.x * z,
+            y: rhs.a.y * x + rhs.b.y * y + rhs.c.y * z,
+            z: rhs.a.z * x + rhs.b.z * y + rhs.c.z * z,
+        }
+    }
+}
+
+/// Vector multiplication by M3 with assignment.
+impl std::ops::MulAssign<M3> for V3 {
+    fn mul_assign(&mut self, rhs: M3) {
+        *self = *self * rhs;
+    }
+}
+
+/// Vector multiplication by M4.
+impl std::ops::Mul<M4> for V3 {
+    type Output = Self;
+
+    fn mul(self, rhs: M4) -> Self::Output {
+        let Self { x, y, z } = self;
+
+        Self {
+            x: rhs.a.x * x + rhs.b.x * y + rhs.c.x * z + rhs.d.x,
+            y: rhs.a.y * x + rhs.b.y * y + rhs.c.y * z + rhs.d.y,
+            z: rhs.a.z * x + rhs.b.z * y + rhs.c.z * z + rhs.d.z,
+        }
+    }
+}
+
+/// Vector multiplication by M4 with assignment.
+impl std::ops::MulAssign<M4> for V3 {
+    fn mul_assign(&mut self, rhs: M4) {
+        *self = *self * rhs;
+    }
+}
+
+/// Vector division by scalar.
 impl std::ops::Div<f32> for V3 {
     type Output = Self;
 
-    fn div(self, scalar: f32) -> Self::Output {
-        Self {
-            x: self.x / scalar,
-            y: self.y / scalar,
-            z: self.z / scalar,
-        }
+    fn div(self, rhs: f32) -> Self::Output {
+        self * rhs.recip()
     }
 }
 
+/// Vector division by scalar with assignment.
 impl std::ops::DivAssign<f32> for V3 {
-    fn div_assign(&mut self, scalar: f32) {
-        *self = *self / scalar
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs;
+    }
+}
+
+/// Vector comparison by magnitude.
+impl std::cmp::PartialOrd for V3 {
+    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
+        self.magnitude_squared().partial_cmp(&rhs.magnitude_squared())
     }
 }
 
 impl V3 {
-    /// Construct a new [`V3`], using the provided values.
+    /// Creates a new [`V3`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
 
-    /// A zero vector.
-    pub const fn zero() -> Self {
-        Self::new(0.0, 0.0, 0.0)
-    }
-
-    /// A unit vector in the `x` direction.
-    pub const fn unit_x() -> Self {
-        Self::new(1.0, 0.0, 0.0)
-    }
-
-    /// A unit vector in the `y` direction.
-    pub const fn unit_y() -> Self {
-        Self::new(0.0, 1.0, 0.0)
-    }
-
-    /// A unit vector in the `z` direction.
-    pub const fn unit_z() -> Self {
-        Self::new(0.0, 0.0, 1.0)
-    }
-
-    /// Create a [`V4`], using the `x`, `y` and `z` values from this vector, and the provided `w`.
-    pub const fn extend(self, w: f32) -> V4 {
-        V4::new(self.x, self.y, self.z, w)
-    }
-
-    /// Returns the dot product of the vector and `other`.
-    pub fn dot(self, other: Self) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-}
-
-impl V3 {
-    pub fn reset(&mut self) {
-        *self = Self::zero()
-    }
-
-    pub fn dot_product(&self, other: &Self) -> f32 {
-        self.dot(*other)
-    }
-
-    pub fn add_v3(&mut self, other: &Self) {
-        *self += *other
-    }
-
-    pub fn mul_scalar(&self, scalar: f32, output: &mut Self) {
-        *output *= scalar
-    }
-
-    pub fn div_scalar(&self, scalar: f32, output: &mut Self) {
-        *output *= scalar.recip()
-    }
-
+    /// Calculates magnitude of the vector.
     pub fn magnitude(&self) -> f32 {
-        self.magnitude_squared().sqrt()
+        f32::sqrt(self.magnitude_squared())
     }
 
-    pub fn magnitude_squared(self) -> f32 {
+    /// Calculates squared magnitude of the vector; it may be used to compare vectors my magnitude.
+    pub fn magnitude_squared(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    pub fn similarity(&self, other: &Self) -> f32 {
-        self.dot_product(other) / (self.magnitude() * other.magnitude())
+    /// Normalizes the vector.
+    pub fn normalize(&self) -> Self {
+        *self / self.magnitude()
     }
 
-    pub fn normalize(&self, output: &mut Self) {
-        *output = *self * self.magnitude().recip()
-    }
-
-    pub fn to_rotation_m3(&self, output: &mut M3) {
-        let angle = self.magnitude();
-        let inv_mag = angle.recip();
-
-        let x = self.x * inv_mag;
-        let y = self.y * inv_mag;
-        let z = self.z * inv_mag;
-
-        let (sθ, cθ) = angle.sin_cos();
-        let vθ = 1.0 - cθ;
-
-        let (xvθ, yvθ) = (x * vθ, y * vθ);
-        let (xsθ, ysθ, zsθ) = (x * sθ, y * sθ, z * sθ);
-        let (xyvθ, xzvθ, yzvθ) = (y * xvθ, z * xvθ, z * yvθ);
-
-        #[rustfmt::skip]
-        {
-            output.a.x = cθ + x * xvθ; output.a.y = xyvθ   - zsθ; output.a.z = xzvθ       + ysθ;
-            output.b.x = xyvθ   + zsθ; output.b.y = cθ + y * yvθ; output.b.z = yzvθ       - xsθ;
-            output.c.x = xzvθ   - ysθ; output.c.y = yzvθ   + xsθ; output.c.z = cθ + z * z * vθ;
+    /// Calculates cross product of two vectors.
+    pub fn cross(self, rhs: Self) -> Self {
+        Self {
+            x: self.y * rhs.z - self.z * rhs.y,
+            y: self.z * rhs.x - self.x * rhs.z,
+            z: self.x * rhs.y - self.y * rhs.x,
         }
     }
 
-    /// Doesn’t reset the result matrix; except its last row, it should be an identity matrix.
-    pub fn to_translation_m4(&self, output: &mut M4) {
-        output.d.x = self.x;
-        output.d.y = self.y;
-        output.d.z = self.z;
-        output.d.w = 0.0;
+    /// Calculates dot product of two vectors.
+    pub fn dot(self, rhs: Self) -> f32 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
     }
 
-    /// The vector should be normalized.
-    pub fn to_rotation_m4(&self, angle: f32, output: &mut M4) {
-        let x: f32 = self.x;
-        let y: f32 = self.y;
-        let z: f32 = self.z;
+    /// Calculates the Ochiai measure for two vectors.
+    pub fn similarity(&self, other: &Self) -> f32 {
+        (self.dot(*other)) / f32::sqrt(self.magnitude() * other.magnitude())
+    }
 
-        let cθ: f32 = f32::cos(angle);
-        let sθ: f32 = f32::sin(angle);
-        let vθ: f32 = 1.0 - cθ;
+    /// Create a [`V4`], using the `x`, `y` and `z` values from this vector, and the provided `w`.
+    pub fn extend(self, w: f32) -> V4 {
+        V4::new(self.x, self.y, self.z, w)
+    }
 
-        let xvθ: f32 = x * vθ;
-        let yvθ: f32 = y * vθ;
+    /// Converts a rotation vector to a new 3×3 transform matrix.
+    pub fn to_rotation_m3(&self) -> M3 {
+        let θ = self.magnitude();
+        let V3 { x, y, z } = *self / θ;
 
-        let xsθ: f32 = x * sθ;
-        let ysθ: f32 = y * sθ;
-        let zsθ: f32 = z * sθ;
+        let (sθ, cθ) = θ.sin_cos();
+        let vθ = 1.0 - cθ;
 
-        let xyvθ: f32 = y * xvθ;
-        let xzvθ: f32 = z * xvθ;
-        let yzvθ: f32 = z * yvθ;
+        let xvθ = x * vθ;
+        let yvθ = y * vθ;
+
+        let xsθ = x * sθ;
+        let ysθ = y * sθ;
+        let zsθ = z * sθ;
+
+        let xyvθ = y * xvθ;
+        let xzvθ = z * xvθ;
+        let yzvθ = z * yvθ;
 
         #[rustfmt::skip]
-        {
-            output.a.x = cθ + x * xvθ; output.a.y = xyvθ   - zsθ; output.a.z = xzvθ       + ysθ; output.a.w =  0.0;
-            output.b.x = xyvθ   + zsθ; output.b.y = cθ + y * yvθ; output.b.z = yzvθ       - xsθ; output.b.w =  0.0;
-            output.c.x = xzvθ   - ysθ; output.c.y = yzvθ   + xsθ; output.c.z = cθ + z * z * vθ;  output.c.w =  0.0;
-            output.d.x = 0.0;          output.d.y = 0.0;          output.d.z = 0.0;              output.d.w =  1.0;
+        M3 {
+            a: V3::new(cθ + x * xvθ, xyvθ + zsθ,   xzvθ - ysθ),
+            b: V3::new(xyvθ - zsθ,   cθ + y * yvθ, yzvθ + xsθ),
+            c: V3::new(xzvθ + ysθ,   yzvθ - xsθ,   cθ + z * z * vθ),
+        }
+    }
+
+    /// Converts a rotation vector to a new 4×4 transform matrix.
+    pub fn to_rotation_m4(&self) -> M4 {
+        let θ = self.magnitude();
+        let V3 { x, y, z } = *self / θ;
+
+        let (sθ, cθ) = θ.sin_cos();
+        let vθ = 1.0 - cθ;
+
+        let xvθ = x * vθ;
+        let yvθ = y * vθ;
+
+        let xsθ = x * sθ;
+        let ysθ = y * sθ;
+        let zsθ = z * sθ;
+
+        let xyvθ = y * xvθ;
+        let xzvθ = z * xvθ;
+        let yzvθ = z * yvθ;
+
+        #[rustfmt::skip]
+        M4 {
+            a: V4::new(cθ + x * xvθ, xyvθ + zsθ,   xzvθ - ysθ,      0.0),
+            b: V4::new(xyvθ - zsθ,   cθ + y * yvθ, yzvθ + xsθ,      0.0),
+            c: V4::new(xzvθ + ysθ,   yzvθ - xsθ,   cθ + z * z * vθ, 0.0),
+            d: V4::new(0.0,          0.0,          0.0,             1.0),
+        }
+    }
+
+    /// Converts a translation vector to a new 4×4 transform matrix.
+    pub fn to_translation_m4(&self) -> M4 {
+        M4 {
+            a: V4::new(1.0, 0.0, 0.0, 0.0),
+            b: V4::new(0.0, 1.0, 0.0, 0.0),
+            c: V4::new(0.0, 0.0, 1.0, 0.0),
+            d: self.extend(1.0),
         }
     }
 }

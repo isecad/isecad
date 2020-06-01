@@ -18,24 +18,13 @@ impl From<[f32; 4]> for V4 {
     }
 }
 
-impl From<(f32, f32, f32, f32)> for V4 {
-    fn from((x, y, z, w): (f32, f32, f32, f32)) -> Self {
-        Self { x, y, z, w }
-    }
-}
-
 impl Into<[f32; 4]> for V4 {
     fn into(self) -> [f32; 4] {
         [self.x, self.y, self.z, self.w]
     }
 }
 
-impl Into<(f32, f32, f32, f32)> for V4 {
-    fn into(self) -> (f32, f32, f32, f32) {
-        (self.x, self.y, self.z, self.w)
-    }
-}
-
+/// Vector negation.
 impl std::ops::Neg for V4 {
     type Output = Self;
 
@@ -49,120 +38,148 @@ impl std::ops::Neg for V4 {
     }
 }
 
+/// Vector addition.
 impl std::ops::Add for V4 {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-            w: self.w + other.w,
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+            w: self.w + rhs.w,
         }
     }
 }
 
+/// Vector addition with assignment.
 impl std::ops::AddAssign for V4 {
     fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs
+        *self = *self + rhs;
     }
 }
 
+/// Vector subtraction.
 impl std::ops::Sub for V4 {
     type Output = Self;
 
-    fn sub(self, other: Self) -> Self::Output {
+    fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-            w: self.w - other.w,
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+            w: self.w - rhs.w,
         }
     }
 }
 
+/// Vector subtraction with assignment.
 impl std::ops::SubAssign for V4 {
     fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs
+        *self = *self - rhs;
     }
 }
 
+/// Vector multiplication by scalar.
 impl std::ops::Mul<f32> for V4 {
     type Output = Self;
 
-    fn mul(self, scalar: f32) -> Self::Output {
+    fn mul(self, rhs: f32) -> Self::Output {
         Self {
-            x: self.x * scalar,
-            y: self.y * scalar,
-            z: self.z * scalar,
-            w: self.w * scalar,
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+            w: self.w * rhs,
         }
     }
 }
 
+/// Vector multiplication by scalar with assignment.
 impl std::ops::MulAssign<f32> for V4 {
     fn mul_assign(&mut self, scalar: f32) {
-        *self = *self * scalar
+        *self = *self * scalar;
     }
 }
 
+/// Vector multiplication by M4.
+impl std::ops::Mul<M4> for V4 {
+    type Output = Self;
+
+    fn mul(self, rhs: M4) -> Self::Output {
+        let Self { x, y, z, w } = self;
+
+        Self {
+            x: rhs.a.x * x + rhs.b.x * y + rhs.c.x * z + rhs.d.x * w,
+            y: rhs.a.y * x + rhs.b.y * y + rhs.c.y * z + rhs.d.y * w,
+            z: rhs.a.z * x + rhs.b.z * y + rhs.c.z * z + rhs.d.z * w,
+            w: rhs.a.w * x + rhs.b.w * y + rhs.c.w * z + rhs.d.w * w,
+        }
+    }
+}
+
+/// Vector multiplication by M4 with assignment.
+impl std::ops::MulAssign<M4> for V4 {
+    fn mul_assign(&mut self, rhs: M4) {
+        *self = *self * rhs;
+    }
+}
+
+/// Vector division by scalar.
 impl std::ops::Div<f32> for V4 {
     type Output = Self;
 
-    fn div(self, scalar: f32) -> Self::Output {
-        Self {
-            x: self.x / scalar,
-            y: self.y / scalar,
-            z: self.z / scalar,
-            w: self.w / scalar,
-        }
+    fn div(self, rhs: f32) -> Self::Output {
+        self * rhs.recip()
     }
 }
 
+/// Vector division by scalar with assignment.
 impl std::ops::DivAssign<f32> for V4 {
-    fn div_assign(&mut self, scalar: f32) {
-        *self = *self / scalar
+    fn div_assign(&mut self, rhs: f32) {
+        *self = *self / rhs
+    }
+}
+
+/// Vector comparison by magnitude.
+impl std::cmp::PartialOrd for V4 {
+    fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
+        self.magnitude_squared().partial_cmp(&rhs.magnitude_squared())
     }
 }
 
 impl V4 {
-    /// Construct a new [`V4`], using the provided values.
+    /// Creates a new [`V4`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
     }
 
-    /// A zero vector.
-    pub const fn zero() -> Self {
-        Self::new(0.0, 0.0, 0.0, 0.0)
+    /// Calculates magnitude of the vector.
+    pub fn magnitude(&self) -> f32 {
+        f32::sqrt(self.magnitude_squared())
     }
 
-    /// A unit vector in the `x` direction.
-    pub const fn unit_x() -> Self {
-        Self::new(1.0, 0.0, 0.0, 0.0)
+    /// Calculates squared magnitude of the vector; it may be used to compare vectors my magnitude.
+    pub fn magnitude_squared(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
     }
 
-    /// A unit vector in the `y` direction.
-    pub const fn unit_y() -> Self {
-        Self::new(0.0, 1.0, 0.0, 0.0)
+    /// Normalizes the vector.
+    pub fn normalize(&self) -> Self {
+        *self / self.magnitude()
     }
 
-    /// A unit vector in the `z` direction.
-    pub const fn unit_z() -> Self {
-        Self::new(0.0, 0.0, 1.0, 0.0)
+    /// Calculates dot product of two vectors.
+    pub fn dot(self, rhs: Self) -> f32 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
     }
 
-    /// A unit vector in the `w` direction.
-    pub const fn unit_w() -> Self {
-        Self::new(0.0, 0.0, 0.0, 1.0)
+    /// Calculates the Ochiai measure for two vectors.
+    pub fn similarity(&self, other: &Self) -> f32 {
+        (self.dot(*other)) / f32::sqrt(self.magnitude() * other.magnitude())
     }
 
     /// Create a [`V3`], dropping the `w` value.
-    pub const fn truncate(self) -> V3 {
+    pub fn truncate(self) -> V3 {
         V3::new(self.x, self.y, self.z)
-    }
-
-    /// Returns the dot product of the vector and `other`.
-    pub fn dot(self, other: Self) -> f32 {
-        self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
     }
 }

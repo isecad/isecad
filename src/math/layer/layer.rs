@@ -69,7 +69,7 @@ impl<T> Layer<T> for [T] {
     where
         T: Default,
     {
-        let mut vec = Vec::<T>::with_capacity(length);
+        let mut vec = Vec::with_capacity(length);
 
         vec.resize_with(length, Default::default);
 

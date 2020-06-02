@@ -1,14 +1,45 @@
 #![allow(dead_code)]
 
 use crate::*;
-use std::cmp::*;
 
-pub trait Layer<T> {
+pub struct Layer<T>(Box<[T]>);
+
+impl<T> std::ops::Deref for Layer<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
+    }
+}
+
+impl<T> std::ops::DerefMut for Layer<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.as_mut()
+    }
+}
+
+impl From<Layer<u8>> for Layer<f32> {
+    fn from(source: Layer<u8>) -> Layer<f32> {
+        let mut new = Layer::new(source.len());
+
+        for (i, &s_i) in source.iter().enumerate() {
+            new[i] = s_i as f32;
+        }
+
+        new
+    }
+}
+
+impl<T: Default + Copy> Layer<T> {
     // region Core functionality
     /// Creates new layer of specified length.
-    fn of_length(length: usize) -> Box<Self>
-    where
-        T: Default;
+    pub fn new(length: usize) -> Self {
+        let mut vec = Vec::with_capacity(length);
+
+        vec.resize_with(length, Default::default);
+
+        Self(vec.into_boxed_slice())
+    }
 
     /// $O_i = S_{M_i}$
     ///
@@ -25,9 +56,11 @@ pub trait Layer<T> {
     /// -   `self` — $S$ — the source layer to copy items from.
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `output` — $O$ — the output layer to copy items into.
-    fn swizzle(&self, mapping: &[usize], output: &mut Self)
-    where
-        T: Copy;
+    pub fn swizzle(&self, mapping: &[usize], output: &mut Self) {
+        for (i, &m_i) in mapping.iter().enumerate() {
+            output[i] = self[m_i];
+        }
+    }
 
     /// $O_{M_i} = S_{M_i} + A_i$
     ///
@@ -45,65 +78,40 @@ pub trait Layer<T> {
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `add` — $A$ — the layer of values to add to the $S$ values.
     /// -   `output` — $O$ — the output layer to write result into.
-    fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
+    pub fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
     where
-        T: Copy + std::ops::Add<Output = T>;
-    // endregion Core functionality
-
-    // region Statistics
-    /// Returns min and max values of layer at once.
-    fn min_max(&self) -> (T, T)
-    where
-        T: Copy + PartialOrd + Bounded;
-
-    /// Returns indices of elements with min and max values.
-    fn min_max_indices(&self) -> (usize, usize)
-    where
-        T: Copy + PartialOrd + Bounded;
-    // endregion Statistics
-}
-
-impl<T> Layer<T> for [T] {
-    // region Core functionality
-    fn of_length(length: usize) -> Box<Self>
-    where
-        T: Default,
-    {
-        let mut vec = Vec::with_capacity(length);
-
-        vec.resize_with(length, Default::default);
-
-        vec.into_boxed_slice()
-    }
-
-    fn swizzle(&self, mapping: &[usize], output: &mut Self)
-    where
-        T: Copy,
-    {
-        for (i, &m_i) in mapping.iter().enumerate() {
-            output[i] = self[m_i];
-        }
-    }
-
-    fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
-    where
-        T: Copy + std::ops::Add<Output = T>,
+        T: std::ops::Add<Output = T>,
     {
         for (i, &m_i) in mapping.iter().enumerate() {
             output[m_i] = self[m_i] + add[i];
         }
     }
+
+    /// Fills a layer with specified value.
+    ///
+    /// Current implementation uses the `[T]::fill`, but in the future versions we will use WASM `memory.{fill,copy}` when possible instead.
+    pub fn fill(&mut self, value: T) {
+        self.as_mut().fill(value);
+    }
+
+    /// Copies values from this layer to the output.
+    ///
+    /// Current implementation uses the `[T]::copy_from_slice`, but in the future versions we will use WASM `memory.copy` instead.
+    pub fn copy_into(&self, output: &mut Self) {
+        output.copy_from_slice(self);
+    }
     // endregion Core functionality
 
     // region Statistics
-    fn min_max(&self) -> (T, T)
+    /// Returns min and max values of layer at once.
+    pub fn min_max(&self) -> (T, T)
     where
-        T: Copy + PartialOrd + Bounded,
+        T: PartialOrd + Bounded,
     {
         let mut min = Bounded::MAX_BOUND;
         let mut max = Bounded::MIN_BOUND;
 
-        for &s_i in self {
+        for &s_i in self.iter() {
             if s_i < min {
                 min = s_i;
             }
@@ -116,9 +124,10 @@ impl<T> Layer<T> for [T] {
         (min, max)
     }
 
-    fn min_max_indices(&self) -> (usize, usize)
+    /// Returns indices of elements with min and max values.
+    pub fn min_max_indices(&self) -> (usize, usize)
     where
-        T: Copy + PartialOrd + Bounded,
+        T: PartialOrd + Bounded,
     {
         let mut min = Bounded::MAX_BOUND;
         let mut max = Bounded::MIN_BOUND;

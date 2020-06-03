@@ -100,12 +100,9 @@ where
 /// $O_i = \frac{S_i - \min S}{\max S - \min S}$
 ///
 /// Normalizes a scalar field.
-pub fn normalize<T>(source: &Layer<T>, output: &mut Layer<T>)
-where
-    T: Copy + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + PartialOrd + Bounded + Inv,
-{
+pub fn normalize(source: &Layer<f32>, output: &mut Layer<f32>) {
     let (from_lower, from_upper) = min_max(source);
-    let scaling_factor = (from_upper - from_lower).inv();
+    let scaling_factor = (from_upper - from_lower).recip();
 
     for (i, &s_i) in source.iter().enumerate() {
         output[i] = (s_i - from_lower) * scaling_factor;

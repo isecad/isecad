@@ -143,7 +143,7 @@ impl std::ops::Div<f32> for M3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        self * rhs.inv()
+        self * rhs.recip()
     }
 }
 

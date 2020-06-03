@@ -147,7 +147,7 @@ impl std::ops::Div<f32> for V3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        self * rhs.recip()
+        self * rhs.inv()
     }
 }
 
@@ -165,25 +165,24 @@ impl std::cmp::PartialOrd for V3 {
     }
 }
 
+/// Vector magnitude.
+impl Magnitude for V3 {
+    fn magnitude_squared(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+}
+
+/// Vector normalization.
+impl Normalize for V3 {
+    fn normalize(&self) -> Self {
+        *self / self.magnitude()
+    }
+}
+
 impl V3 {
     /// Creates a new [`V3`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
-    }
-
-    /// Calculates magnitude of the vector.
-    pub fn magnitude(&self) -> f32 {
-        f32::sqrt(self.magnitude_squared())
-    }
-
-    /// Calculates squared magnitude of the vector; it may be used to compare vectors my magnitude.
-    pub fn magnitude_squared(&self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z
-    }
-
-    /// Normalizes the vector.
-    pub fn normalize(&self) -> Self {
-        *self / self.magnitude()
     }
 
     /// Calculates cross product of two vectors.

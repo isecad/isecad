@@ -2,93 +2,6 @@
 
 ## F32 layer
 
-### Core functionality
-
-### Statistics
-
-#### ~~_min max_~~
-
-Returns a tuple of minimum and maximum values of an F32 layer.
-
--   **Usage:** Direct and indirect usages in atmosphere, climatology, hydrology,
-    and thermodynamics simulation.
--   **Frequency of the hottest usages:** Few times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Implemented.
--   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Ord` or
-    `PartialOrd`, `Copy`, and `Bounded`.
-
-#### _sum_
-
-Returns sum of an F32 layer.
-
--   **Usage:** Direct and indirect usages in thermodynamics, hydrology,
-    hydrosphere, crust, spherical geometry, and atmosphere simulation.
--   **Frequency of the hottest usages:** Few times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented; requires `Sum`.
--   **Other implementations:** U8 layer.
--   **Possible implementations:** Any layer of type implementing `Sum`.
-
-#### _average_
-
-Returns an average value of an F32 layer.
-
--   **Usage:** Direct and indirect usages in thermodynamics, hydrology,
-    hydrosphere, and atmosphere simulation.
--   **Frequency of the hottest usages:** Few times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented; probably implemented in the Rust library, or may
-    be implemented as a one-liner.
--   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Sum`,
-    `Div<f32>`, and `Copy`.
-
-#### _normalize from to_
-
-Normalizes an F32 layer from given old range to given new range.
-
--   **Usage:** Direct and indirect usages in climatology, thermodynamics,
-    spherical geometry, and visualization.
--   **Frequency of the hottest usages:** Multiple times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** V3 layer.
--   **Possible implementations:** Any layer of type implementing `Sub<f32>`,
-    `Add<f32>`, `Mul<f32>`, and `Copy`.
--   **Note:** May be straightforwardly parallelized.
-
-#### _normalize to_
-
-Normalizes an F32 layer from inferred old range to given new range.
-
--   **Usage:** Direct and indirect usages in climatology, thermodynamics,
-    spherical geometry, and visualization.
--   **Frequency of the hottest usages:** Multiple times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** V3 layer.
--   **Possible implementations:** Any layer of type implementing `Sub<f32>`,
-    `Add<f32>`, `Mul<f32>`, `Copy`, `Ord` or `PartialOrd`, and `Bounded`.
--   **Note:** Probably, may be entirely or partially parallelized.
-
-#### _normalize_
-
-Normalizes an F32 layer from inferred old range to the $\[0, 1\]$ range.
-
--   **Usage:** Direct and indirect usages in climatology, thermodynamics,
-    spherical geometry, and visualization.
--   **Frequency of the hottest usages:** Multiple times per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** V3 layer.
--   **Possible implementations:** Any layer of type implementing `Sub<f32>`,
-    `Add<f32>`, `Mul<f32>`, `Copy`, `Ord` or `PartialOrd`, and `Bounded`, and
-    consisting of floats, i.e., F32 layer, V3 layer; also may be implemented for
-    integer layers, but it probably will be useless.
--   **Note:** Probably, may be entirely or partially parallelized.
-
 ### Raster graphics
 
 #### _copy into selection_
@@ -575,37 +488,6 @@ to physics module.
 
 ## U8 layer
 
-### Core functionality
-
-### Statistics
-
-#### _sum_
-
-Returns sum of an U8 layer.
-
--   **Usage:** One usage in image segmentation. Probably, U8 layers used here as
-    Bool layers, so this function works as popcnt for a boolean array.
--   **Frequency of the hottest usages:** Once per supercontinent cycle.
--   **Conclusion:** Keep.
--   **Status:** Implemented in the Rust library; possible implementation for
-    Bool layers should be implemented on our side.
--   **Other implementations:** F32 layer.
--   **Possible implementations:** Any layer of type implementing `Sum`.
-
-#### _unique_
-
-Returns an array of unique values of a U8 layer.
-
--   **Usage:** Two usages in tectonics and lithosphere; probably may be reduced
-    to one.
--   **Frequency of the hottest usages:** Once per supercontinent cycle.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Copy` and
-    `Hash`. `Hash`? `Copy`? Investigate how to implement this in Rust most
-    efficiently.
-
 ### Raster graphics
 
 #### _fill into selection_
@@ -735,61 +617,7 @@ Applies erosion, then subtracts original from result.
 
 -   **Status:** Unimplemented.
 
-## Usize layer
-
-### Core functionality
-
-### Statistics
-
-### Raster graphics
-
-### Misc
-
 ## V3 layer
-
-### Core functionality
-
-### Statistics
-
-#### _normalize to_
-
-Normalizes magnitudes of vectors from inferred current range to the $[0, n]$
-range, where $n$ is given value.
-
--   **Usage:** One usage in climatology.
--   **Frequency of the hottest usages:** Once per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** F32 layer.
--   **Possible implementations:** Any layer of type implementing `Sub<f32>`,
-    `Add<f32>`, `Mul<f32>`, `Copy`, `Ord` or `PartialOrd`, and `Bounded`.
--   **Note:** May be entirely or partially parallelized.
-
-#### _weighted average_
-
-Calculates weighted average of a V3 layer. Most probably weights layer may be a
-Bool layer, not an F32 layer or U8 layer.
-
--   **Usage:** Two usages in tectonics.
--   **Frequency of the hottest usages:** Few times per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Sum`,
-    `Div<f32>`, `Mul<f32>`, and `Copy`.
--   **Note:** May be entirely or partially parallelized.
-
-#### _normalize values_
-
-Normalizes each vector in a layer.
-
--   **Usage:** One usage in tectonics.
--   **Frequency of the hottest usages:** At least once per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** _None._
--   **Possible implementations:** Any vector/matrix/etc. layer.
--   **Note:** May be straightforwardly parallelized.
 
 ### Raster graphics
 

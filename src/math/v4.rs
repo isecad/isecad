@@ -129,7 +129,7 @@ impl std::ops::Div<f32> for V4 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        self * rhs.recip()
+        self * rhs.inv()
     }
 }
 
@@ -147,25 +147,24 @@ impl std::cmp::PartialOrd for V4 {
     }
 }
 
+/// Vector magnitude.
+impl Magnitude for V4 {
+    fn magnitude_squared(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
+    }
+}
+
+/// Vector normalization.
+impl Normalize for V4 {
+    fn normalize(&self) -> Self {
+        *self / self.magnitude()
+    }
+}
+
 impl V4 {
     /// Creates a new [`V4`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
-    }
-
-    /// Calculates magnitude of the vector.
-    pub fn magnitude(&self) -> f32 {
-        f32::sqrt(self.magnitude_squared())
-    }
-
-    /// Calculates squared magnitude of the vector; it may be used to compare vectors my magnitude.
-    pub fn magnitude_squared(&self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
-    }
-
-    /// Normalizes the vector.
-    pub fn normalize(&self) -> Self {
-        *self / self.magnitude()
     }
 
     /// Calculates dot product of two vectors.

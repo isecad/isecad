@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use crate::*;
-
 pub struct Layer<T>(Box<[T]>);
 
 impl<T> std::ops::Deref for Layer<T> {
@@ -18,25 +16,12 @@ impl<T> std::ops::DerefMut for Layer<T> {
     }
 }
 
-impl From<Layer<u8>> for Layer<f32> {
-    fn from(source: Layer<u8>) -> Layer<f32> {
-        let mut new = Layer::new(source.len());
-
-        for (i, &s_i) in source.iter().enumerate() {
-            new[i] = s_i as f32;
-        }
-
-        new
-    }
-}
-
 impl<T: Default + Copy> Layer<T> {
-    // region Core functionality
     /// Creates new layer of specified length.
     pub fn new(length: usize) -> Self {
         let mut vec = Vec::with_capacity(length);
 
-        vec.resize_with(length, Default::default);
+        vec.resize_with(length, T::default);
 
         Self(vec.into_boxed_slice())
     }
@@ -100,54 +85,4 @@ impl<T: Default + Copy> Layer<T> {
     pub fn copy_into(&self, output: &mut Self) {
         output.copy_from_slice(self);
     }
-    // endregion Core functionality
-
-    // region Statistics
-    /// Returns min and max values of layer at once.
-    pub fn min_max(&self) -> (T, T)
-    where
-        T: PartialOrd + Bounded,
-    {
-        let mut min = Bounded::MAX_BOUND;
-        let mut max = Bounded::MIN_BOUND;
-
-        for &s_i in self.iter() {
-            if s_i < min {
-                min = s_i;
-            }
-
-            if s_i > max {
-                max = s_i;
-            }
-        }
-
-        (min, max)
-    }
-
-    /// Returns indices of elements with min and max values.
-    pub fn min_max_indices(&self) -> (usize, usize)
-    where
-        T: PartialOrd + Bounded,
-    {
-        let mut min = Bounded::MAX_BOUND;
-        let mut max = Bounded::MIN_BOUND;
-
-        let mut max_index = 0;
-        let mut min_index = 0;
-
-        for (i, &s_i) in self.iter().enumerate() {
-            if s_i < min {
-                min = s_i;
-                min_index = i;
-            }
-
-            if s_i > max {
-                max = s_i;
-                max_index = i;
-            }
-        }
-
-        (min_index, max_index)
-    }
-    // endregion Statistics
 }

@@ -24,6 +24,11 @@ impl Into<[f32; 4]> for V4 {
     }
 }
 
+impl Bounded for V4 {
+    const MIN_BOUND: V4 = V4::new(0.0, 0.0, 0.0, 0.0);
+    const MAX_BOUND: V4 = V4::new(f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND);
+}
+
 /// Vector negation.
 impl std::ops::Neg for V4 {
     type Output = Self;
@@ -129,7 +134,7 @@ impl std::ops::Div<f32> for V4 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        self * rhs.recip()
+        self * rhs.inv()
     }
 }
 
@@ -143,21 +148,65 @@ impl std::ops::DivAssign<f32> for V4 {
 /// Vector comparison by magnitude.
 impl std::cmp::PartialOrd for V4 {
     fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
-        self.magnitude_squared().partial_cmp(&rhs.magnitude_squared())
+        self.magnitude_proportional().partial_cmp(&rhs.magnitude_proportional())
     }
 }
 
 /// Vector magnitude.
 impl Magnitude for V4 {
-    fn magnitude_squared(&self) -> f32 {
+    type Output = f32;
+
+    fn magnitude_proportional(&self) -> Self::Output {
         self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
+    }
+
+    fn magnitude(&self) -> Self::Output {
+        f32::sqrt(self.magnitude_proportional())
+    }
+}
+
+/// Numeric value of vector.
+impl ToNumeric<f32> for V4 {
+    fn to_numeric_proportional(&self) -> f32 {
+        self.magnitude_proportional()
+    }
+
+    fn to_numeric(&self) -> f32 {
+        self.magnitude()
     }
 }
 
 /// Vector normalization.
 impl Normalize for V4 {
     fn normalize(&self) -> Self {
-        *self / self.magnitude()
+        let mag = self.magnitude();
+
+        *self / if mag == 0.0 { 1.0 } else { mag }
+    }
+}
+
+/// Vector division by `usize`.
+impl DivUsize for V4 {
+    fn div_usize(self, rhs: usize) -> Self {
+        self / rhs as f32
+    }
+}
+
+/// Dot product.
+impl Dot for V4 {
+    type Output = f32;
+
+    fn dot(self, rhs: Self) -> f32 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
+    }
+}
+
+/// Ochiai measure for two vectors.
+impl Similarity for V4 {
+    type Output = f32;
+
+    fn similarity(self, other: Self) -> Self::Output {
+        self.dot(other) / f32::sqrt(self.magnitude() * other.magnitude())
     }
 }
 
@@ -165,16 +214,6 @@ impl V4 {
     /// Creates a new [`V4`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
         Self { x, y, z, w }
-    }
-
-    /// Calculates dot product of two vectors.
-    pub fn dot(self, rhs: Self) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
-    }
-
-    /// Calculates the Ochiai measure for two vectors.
-    pub fn similarity(&self, other: &Self) -> f32 {
-        (self.dot(*other)) / f32::sqrt(self.magnitude() * other.magnitude())
     }
 
     /// Create a [`V3`], dropping the `w` value.

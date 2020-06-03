@@ -25,6 +25,11 @@ impl Into<[f32; 3]> for V3 {
     }
 }
 
+impl Bounded for V3 {
+    const MIN_BOUND: V3 = V3::new(0.0, 0.0, 0.0);
+    const MAX_BOUND: V3 = V3::new(f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND);
+}
+
 /// Vector negation.
 impl std::ops::Neg for V3 {
     type Output = Self;
@@ -75,6 +80,26 @@ impl std::ops::Sub for V3 {
 impl std::ops::SubAssign for V3 {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
+    }
+}
+
+/// Cross product.
+impl std::ops::Mul<Self> for V3 {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.y * rhs.z - self.z * rhs.y,
+            y: self.z * rhs.x - self.x * rhs.z,
+            z: self.x * rhs.y - self.y * rhs.x,
+        }
+    }
+}
+
+/// Cross product with assignment.
+impl std::ops::MulAssign<Self> for V3 {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
     }
 }
 
@@ -147,7 +172,7 @@ impl std::ops::Div<f32> for V3 {
     type Output = Self;
 
     fn div(self, rhs: f32) -> Self::Output {
-        self * rhs.recip()
+        self * rhs.inv()
     }
 }
 
@@ -161,21 +186,65 @@ impl std::ops::DivAssign<f32> for V3 {
 /// Vector comparison by magnitude.
 impl std::cmp::PartialOrd for V3 {
     fn partial_cmp(&self, rhs: &Self) -> Option<std::cmp::Ordering> {
-        self.magnitude_squared().partial_cmp(&rhs.magnitude_squared())
+        self.magnitude_proportional().partial_cmp(&rhs.magnitude_proportional())
     }
 }
 
 /// Vector magnitude.
 impl Magnitude for V3 {
-    fn magnitude_squared(&self) -> f32 {
+    type Output = f32;
+
+    fn magnitude_proportional(&self) -> Self::Output {
         self.x * self.x + self.y * self.y + self.z * self.z
+    }
+
+    fn magnitude(&self) -> Self::Output {
+        f32::sqrt(self.magnitude_proportional())
+    }
+}
+
+/// Numeric value of vector.
+impl ToNumeric<f32> for V3 {
+    fn to_numeric_proportional(&self) -> f32 {
+        self.magnitude_proportional()
+    }
+
+    fn to_numeric(&self) -> f32 {
+        self.magnitude()
     }
 }
 
 /// Vector normalization.
 impl Normalize for V3 {
     fn normalize(&self) -> Self {
-        *self / self.magnitude()
+        let mag = self.magnitude();
+
+        *self / if mag == 0.0 { 1.0 } else { mag }
+    }
+}
+
+/// Vector division by `usize`.
+impl DivUsize for V3 {
+    fn div_usize(self, rhs: usize) -> Self {
+        self / rhs as f32
+    }
+}
+
+/// Dot product.
+impl Dot for V3 {
+    type Output = f32;
+
+    fn dot(self, rhs: Self) -> f32 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+/// Ochiai measure for two vectors.
+impl Similarity for V3 {
+    type Output = f32;
+
+    fn similarity(self, other: Self) -> Self::Output {
+        self.dot(other) / f32::sqrt(self.magnitude() * other.magnitude())
     }
 }
 
@@ -183,25 +252,6 @@ impl V3 {
     /// Creates a new [`V3`] using the provided values.
     pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
-    }
-
-    /// Calculates cross product of two vectors.
-    pub fn cross(self, rhs: Self) -> Self {
-        Self {
-            x: self.y * rhs.z - self.z * rhs.y,
-            y: self.z * rhs.x - self.x * rhs.z,
-            z: self.x * rhs.y - self.y * rhs.x,
-        }
-    }
-
-    /// Calculates dot product of two vectors.
-    pub fn dot(self, rhs: Self) -> f32 {
-        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
-    }
-
-    /// Calculates the Ochiai measure for two vectors.
-    pub fn similarity(&self, other: &Self) -> f32 {
-        (self.dot(*other)) / f32::sqrt(self.magnitude() * other.magnitude())
     }
 
     /// Create a [`V4`], using the `x`, `y` and `z` values from this vector, and the provided `w`.

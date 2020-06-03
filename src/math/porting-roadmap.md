@@ -2,32 +2,6 @@
 
 ## F32 layer
 
-### Raster graphics
-
-#### _copy into selection_
-
-Copies data from one F32 layer to another using a selection Bool layer.
-
--   **Usage:** Few usages in crust and lithosphere simulation.
--   **Frequency of the hottest usages:** Few times per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** _None._
--   **Possible implementations:** Any layer of type implementing `Copy`.
--   **Note:** May be straightforwardly parallelized.
-
-#### _fill into selection_
-
-Fills an F32 layer area with given value.
-
--   **Usage:** Few usages in crust, hydrosphere, and lithosphere simulation.
--   **Frequency of the hottest usages:** Few times per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** U8 layer.
--   **Possible implementations:** Any layer of type implementing `Copy`.
--   **Note:** May be straightforwardly parallelized.
-
 ### Field math
 
 #### _laplacian_
@@ -92,8 +66,8 @@ Writes result values to other layer.
 #### _mix_
 
 Applies a `mix`-like interpolation to each value of an F32 layer. While the
-`mix` interpolation uses the $x \times (1 - a) + y \times a$ formula, this one
-uses the $x + a \times (y - x)$ formula.
+`mix` interpolation uses the $x (1 - a) + y a$ formula, this one uses the
+$x + a (y - x)$ formula.
 
 -   **Usage:** Few usages in crust and hydrosphere.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.
@@ -138,7 +112,7 @@ Clamps each value between min and max values.
 
 Applies the `smoothstep` interpolation to each value of an F32 layer.
 
--   **Usage:** Mo usages at all; one potential usage in crust generator.
+-   **Usage:** No usages at all; one potential usage in crust generator.
 -   **Frequency of the hottest usages:** Once per simulation.
 -   **Conclusion:** Keep.
 -   **Status:** Unimplemented; may be implemented using generalized
@@ -212,20 +186,6 @@ to physics module.
 -   **Note:** Probably, May be straightforwardly parallelized.
 
 ## U8 layer
-
-### Raster graphics
-
-#### _fill into selection_
-
-Fills a U8 layer area with given value.
-
--   **Usage:** Few usages in tectonics and lithosphere simulation.
--   **Frequency of the hottest usages:** Few times per plate per iteration.
--   **Conclusion:** Keep.
--   **Status:** Unimplemented.
--   **Other implementations:** F32 layer.
--   **Possible implementations:** Any layer of type implementing `Copy`.
--   **Note:** May be straightforwardly parallelized.
 
 ### Field math
 

@@ -784,4 +784,30 @@ impl<T: Default + Copy> Layer<T> {
     }
     // endregion Misc
     // endregion Field operations
+
+    // region Raster graphics
+    /// $O_i = \begin{cases}
+    ///     F_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i, & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn copy_into_selection(&self, copy_from: &Self, mask: &Layer<bool>, output: &mut Self) {
+        for (((i, &s_i), &f_i), &m_i) in self.iter().enumerate().zip(copy_from).zip(mask) {
+            output[i] = if m_i { f_i } else { s_i }
+        }
+    }
+
+    /// $O_i = \begin{cases}
+    ///     f,   & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i, & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn fill_into_selection(&self, fill: T, mask: &Layer<bool>, output: &mut Self) {
+        for ((i, &s_i), &m_i) in self.iter().enumerate().zip(mask) {
+            output[i] = if m_i { fill } else { s_i }
+        }
+    }
+
+    // TODO:
+    //     -   `flood_select` (requires grid)
+    //     -   `image_segmentation` (requires grid)
+    // endregion Raster graphics
 }

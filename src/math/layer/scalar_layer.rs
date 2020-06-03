@@ -71,10 +71,7 @@ pub fn rescale_from_to<T>(source: &Layer<T>, output: &mut Layer<T>, from_lower: 
 where
     T: Copy + Sub<Output = T> + Mul<Output = T> + Add<Output = T> + Div<Output = T>,
 {
-    let from_range = from_upper - from_lower;
-    let to_range = to_upper - to_lower;
-
-    let scaling_factor = to_range / from_range;
+    let scaling_factor = (to_upper - to_lower) / (from_upper - from_lower);
 
     for (i, &s_i) in source.iter().enumerate() {
         output[i] = (s_i - from_lower) * scaling_factor + to_lower;

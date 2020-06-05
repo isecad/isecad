@@ -226,24 +226,33 @@ impl<T: Default + Copy> Layer<T> {
         (min, max)
     }
 
-    /// Returns index of max element of a scalar layer.
-    pub fn scalar_max_index(&self) -> usize
+    /// Returns indices of min and max elements.
+    pub fn min_max_indices<U>(&self) -> (usize, usize)
     where
-        T: PartialOrd + Bounded,
+        T: ToNumeric<U>,
+        U: Copy + PartialOrd + Bounded,
     {
-        // TODO: Generalize.
+        let mut min_proportional = U::MAX_BOUND;
+        let mut max_proportional = U::MIN_BOUND;
 
-        let mut max = T::MIN_BOUND;
+        let mut min_index = 0;
         let mut max_index = 0;
 
         for (i, &s_i) in self.iter().enumerate() {
-            if s_i > max {
-                max = s_i;
+            let numeric_proportional = s_i.to_numeric_proportional();
+
+            if numeric_proportional < min_proportional {
+                min_proportional = numeric_proportional;
+                min_index = i;
+            }
+
+            if numeric_proportional > max_proportional {
+                max_proportional = numeric_proportional;
                 max_index = i;
             }
         }
 
-        max_index
+        (min_index, max_index)
     }
 
     /// $O_i = \frac{u_t - l_t}{u_f - l_f} (S_i - l_f) + l_t$
@@ -744,6 +753,20 @@ impl<T: Default + Copy> Layer<T> {
         self.map1(output, |s_i| s_i.magnitude());
     }
     // endregion Misc
+
+    // TODO:
+    //  -   `laplacian` (requires grid).
+    //  -   `gradient` (requires grid).
+    //  -   `average_difference` (requires grid).
+    //  -   `arrow_differential` (requires grid).
+    //  -   `divergence` (requires grid).
+    //  -   `curl` (requires grid).
+    //  -   `diffusion_by_{layer,value}` (requires grid).
+    //  -   `get_{in,outside_of}_{layer,value}_{layer,value}_range_mask`.
+    //  -   `sqrt` (requires trait).
+    //  -   `hadamard_{layer,value}` (requires trait).
+    //  -   `{add,sub}_{layer,value}` for vector ⋅ scalar (requires trait implementations for vectors).
+    //  -   Entrywise counterparts for existing additive operations for vector ⋅ scalar (requires trait).
     // endregion Field operations
 
     // region Raster graphics
@@ -764,8 +787,8 @@ impl<T: Default + Copy> Layer<T> {
     }
 
     // TODO:
-    //     -   `flood_select` (requires grid)
-    //     -   `image_segmentation` (requires grid)
+    //  -   `flood_select` (requires grid)
+    //  -   `image_segmentation` (requires grid)
     // endregion Raster graphics
 
     // region Interpolations

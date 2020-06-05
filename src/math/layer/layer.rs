@@ -31,6 +31,20 @@ impl<'a, T: Default + Copy> IntoIterator for &'a Layer<T> {
     }
 }
 
+/// # Common abbreviations
+///
+/// -   Layers:
+///     -   $S$ — `self` — source layer of operations.
+///     -   $O$ — `output` — output layer of operations.
+///     -   $B$, $C$ — `layer_b`, `layer_c` — layers of second and third operands of some operations.
+///     -   $M$ — `mapping` or `mask` — reordering mask for swizzle operations or boolean mask of some operations.
+///     -   $W$ — `weights` — weights layer of some operations.
+/// -   Other:
+///     -   $X_i$ — `x_i` — $i$-th item of $X$ layer.
+///     -   $L_X$ — `l_x` — length of $X$ layer.
+///     -   $\min X$, $\max X$ — $\min(X_0 \mathellipsis X_n), \max(X_0 \mathellipsis X_n)$ — min and max values of $X$ layer.
+///     -   $X_n$ — $X_{L_X - 1}$ — last element of $X$ layer.
+///     -   $v$ — `value` — single-value operand of some operations.
 impl<T: Default + Copy> Layer<T> {
     // region Core functionality
     /// Creates new layer of specified length.
@@ -42,6 +56,39 @@ impl<T: Default + Copy> Layer<T> {
         Self(vec.into_boxed_slice())
     }
 
+    pub fn map1<F, Z>(&self, output: &mut Layer<Z>, f: F)
+    where
+        F: Fn(T) -> Z,
+        Z: Copy + Default,
+    {
+        for (i, &s_i) in self.iter().enumerate() {
+            output[i] = f(s_i);
+        }
+    }
+
+    pub fn map2<F, U, Z>(&self, layer_b: &Layer<U>, output: &mut Layer<Z>, f: F)
+    where
+        F: Fn(T, U) -> Z,
+        U: Copy + Default,
+        Z: Copy + Default,
+    {
+        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
+            output[i] = f(s_i, b_i);
+        }
+    }
+
+    pub fn map3<F, U, W, Z>(&self, layer_b: &Layer<U>, layer_c: &Layer<W>, output: &mut Layer<Z>, f: F)
+    where
+        F: Fn(T, U, W) -> Z,
+        U: Copy + Default,
+        W: Copy + Default,
+        Z: Copy + Default,
+    {
+        for (((i, &s_i), &b_i), &c_i) in self.iter().enumerate().zip(layer_b).zip(layer_c) {
+            output[i] = f(s_i, b_i, c_i);
+        }
+    }
+
     /// Converts a layer into another type.
     pub fn convert<U>(&self) -> Layer<U>
     where
@@ -50,9 +97,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let mut new = Layer::new(self.len());
 
-        for (i, &s_i) in self.iter().enumerate() {
-            new[i] = s_i.into();
-        }
+        self.map1(&mut new, |s_i| s_i.into());
 
         new
     }
@@ -72,10 +117,8 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `self` — $S$ — the source layer to copy items from.
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `output` — $O$ — the output layer to copy items into.
-    pub fn swizzle(&self, mapping: &[usize], output: &mut Self) {
-        for (i, &m_i) in mapping.iter().enumerate() {
-            output[i] = self[m_i];
-        }
+    pub fn swizzle(&self, mapping: &Layer<usize>, output: &mut Self) {
+        mapping.map1(output, |m_i| self[m_i]);
     }
 
     /// $O_{M_i} = S_{M_i} + A_i$
@@ -94,7 +137,7 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `add` — $A$ — the layer of values to add to the $S$ values.
     /// -   `output` — $O$ — the output layer to write result into.
-    pub fn inverse_swizzle_add(&self, mapping: &[usize], add: &Self, output: &mut Self)
+    pub fn inverse_swizzle_add(&self, mapping: &Layer<usize>, add: &Self, output: &mut Self)
     where
         T: std::ops::Add<Output = T>,
     {
@@ -188,6 +231,8 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd + Bounded,
     {
+        // TODO: Generalize.
+
         let mut max = T::MIN_BOUND;
         let mut max_index = 0;
 
@@ -220,9 +265,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = (to_upper - to_lower) / (from_upper - from_lower);
 
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = (s_i - from_lower) * scaling_factor + to_lower;
-        }
+        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor + to_lower);
     }
 
     /// $O_i = \frac{u_t - l_t}{\max S - \min S} (S_i - \min S) + l_t$
@@ -263,9 +306,7 @@ impl<T: Default + Copy> Layer<T> {
 
         let scaling_factor = (from_upper - from_lower).inv();
 
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = (s_i - from_lower) * scaling_factor;
-        }
+        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{u_f} S_i$
@@ -285,9 +326,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = to_upper / from_upper;
 
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i * scaling_factor;
-        }
+        self.map1(output, |s_i| s_i * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{\max S} S_i$
@@ -316,9 +355,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Normalize,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.normalize();
-        }
+        self.map1(output, |s_i| s_i.normalize());
     }
     // endregion Statistics
 
@@ -329,9 +366,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = if s_i < b_i { s_i } else { b_i };
-        }
+        self.map2(layer_b, output, |s_i, b_i| if s_i < b_i { s_i } else { b_i });
     }
 
     /// $O_i = \max(S_i, B_i)$
@@ -339,9 +374,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = if s_i <= b_i { b_i } else { s_i };
-        }
+        self.map2(layer_b, output, |s_i, b_i| if s_i <= b_i { b_i } else { s_i });
     }
 
     /// $O_i = S_i < B_i$
@@ -349,9 +382,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i < b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i < b_i);
     }
 
     /// $O_i = S_i > B_i$
@@ -359,9 +390,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i > b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i > b_i);
     }
 
     /// $O_i = S_i \le B_i$
@@ -369,9 +398,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i <= b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i <= b_i);
     }
 
     /// $O_i = S_i \ge B_i$
@@ -379,9 +406,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i >= b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i >= b_i);
     }
 
     /// $O_i = S_i = B_i$
@@ -389,9 +414,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i == b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i == b_i);
     }
 
     /// $O_i = S_i \ne B_i$
@@ -399,69 +422,63 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i != b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i != b_i);
     }
 
     /// $O_i = \begin{cases}
-    ///     S_i + B_i, & \text{if}   & M_{i \mod L_M} = \texttt{true} \\
-    ///     S_i,       & \text{else} &                                \\
+    ///     S_i + B_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,       & \text{else} &                     \\
     /// \end{cases}$
+    ///
+    /// `add_field_term` in Tectonics.js.
+    ///
+    /// TODO:
+    ///  Mask should be read repeatedly; or we have to reconsider `Lithosphere#merge_plates_to_master` code to make
+    ///  `globalized_plate_mask` match length of `master.total_crust` and `globalized_crust` crusts.
     pub fn add_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
     where
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        let l_m = mask.len();
-
-        for ((i, &a_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = if mask[i % l_m] { a_i + b_i } else { a_i };
-        }
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
     }
 
     /// $O_i = \begin{cases}
-    ///     S_i - B_i, & \text{if}   & M_{i \mod L_M} = \texttt{true} \\
-    ///     S_i,       & \text{else} &                                \\
+    ///     S_i - B_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,       & \text{else} &                     \\
     /// \end{cases}$
+    ///
+    /// `sub_field_term` in Tectonics.js.
     pub fn sub_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
     where
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        let l_m = mask.len();
-
-        for ((i, &a_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = if mask[i % l_m] { a_i - b_i } else { a_i };
-        }
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
     }
 
-    /// $O_i = S_i + W_{i \mod L_W} B_i$
+    /// $O_i = S_i + W_i B_i$
+    ///
+    /// `add_field_term` in Tectonics.js.
     pub fn add_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
     where
         T: Add<X, Output = T>,
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        let l_w = weights.len();
-
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i + weights[i % l_w] * b_i;
-        }
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
     }
 
-    /// $O_i = S_i - W_{i \mod L_W} B_i$
+    /// $O_i = S_i - W_i B_i$
+    ///
+    /// `sub_field_term` in Tectonics.js.
     pub fn sub_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
     where
         T: Sub<X, Output = T>,
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        let l_w = weights.len();
-
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i - weights[i % l_w] * b_i;
-        }
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
     }
 
     /// $O_i = S_i + B_i$
@@ -470,9 +487,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i + b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i + b_i);
     }
 
     /// $O_i = S_i - B_i$
@@ -481,9 +496,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i - b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i - b_i);
     }
 
     /// $O_i = S_i B_i$
@@ -492,9 +505,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Mul<U, Output = T>,
         U: Copy + Default,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i * b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i * b_i);
     }
 
     /// $O_i = \frac{S_i}{B_i}$
@@ -503,9 +514,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Div<U, Output = T>,
         U: Copy + Default,
     {
-        for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i / b_i;
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i / b_i);
     }
 
     // $O_i = S_i^{B_i}$
@@ -514,9 +523,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Power<U, Output = T>,
         U: Copy + Default,
     {
-        for ((i, s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i.power(b_i);
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i.power(b_i));
     }
 
     /// $O_i = S_i \cdot B_i$
@@ -525,9 +532,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Dot<Output = U>,
         U: Copy + Default,
     {
-        for ((i, s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i.dot(b_i);
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i.dot(b_i));
     }
 
     /// $O_i = \frac{S_i \cdot B_i}{\sqrt{|S_i||B_i|}}$
@@ -536,9 +541,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Similarity<Output = U>,
         U: Copy + Default,
     {
-        for ((i, s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
-            output[i] = s_i.similarity(b_i);
-        }
+        self.map2(layer_b, output, |s_i, b_i| s_i.similarity(b_i));
     }
     // endregion Layer ⋅ Layer
 
@@ -548,9 +551,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = if s_i < value { s_i } else { value };
-        }
+        self.map1(output, |s_i| if s_i < value { s_i } else { value });
     }
 
     /// $O_i = \max(S_i, s)$
@@ -558,9 +559,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = if s_i > value { s_i } else { value };
-        }
+        self.map1(output, |s_i| if s_i > value { s_i } else { value });
     }
 
     /// $O_i = S_i < v$
@@ -568,9 +567,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i < value;
-        }
+        self.map1(output, |s_i| s_i < value);
     }
 
     /// $O_i = S_i > v$
@@ -578,9 +575,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i > value;
-        }
+        self.map1(output, |s_i| s_i > value);
     }
 
     /// $O_i = S_i \le v$
@@ -588,9 +583,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i <= value;
-        }
+        self.map1(output, |s_i| s_i <= value);
     }
 
     /// $O_i = S_i \ge v$
@@ -598,9 +591,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i >= value;
-        }
+        self.map1(output, |s_i| s_i >= value);
     }
 
     /// $O_i = S_i = v$
@@ -608,9 +599,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i == value;
-        }
+        self.map1(output, |s_i| s_i == value);
     }
 
     /// $O_i = S_i \ne v$
@@ -618,69 +607,59 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i != value;
-        }
+        self.map1(output, |s_i| s_i != value);
     }
 
     /// $O_i = \begin{cases}
-    ///     S_i + v, & \text{if}   & M_{i \mod L_M} = \texttt{true} \\
-    ///     S_i,     & \text{else} &                                \\
+    ///     S_i + v, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,     & \text{else} &                     \\
     /// \end{cases}$
+    ///
+    /// `add_scalar_term` in Tectonics.js.
     pub fn add_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
     where
         T: Add<U, Output = T>,
         U: Copy,
     {
-        let l_m = mask.len();
-
-        for (i, &a_i) in self.iter().enumerate() {
-            output[i] = if mask[i % l_m] { a_i + value } else { a_i };
-        }
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
     }
 
     /// $O_i = \begin{cases}
-    ///     S_i - v, & \text{if}   & M_{i \mod L_M} = \texttt{true} \\
-    ///     S_i,     & \text{else} &                                \\
+    ///     S_i - v, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,     & \text{else} &                     \\
     /// \end{cases}$
+    ///
+    /// `sub_scalar_term` in Tectonics.js.
     pub fn sub_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
     where
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        let l_m = mask.len();
-
-        for (i, &a_i) in self.iter().enumerate() {
-            output[i] = if mask[i % l_m] { a_i - value } else { a_i };
-        }
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
     }
 
-    /// $O_i = S_i + W_{i \mod L_W} v$
+    /// $O_i = S_i + W_i v$
+    ///
+    /// `add_scalar_term` in Tectonics.js.
     pub fn add_value_weighted<U, W, X>(&self, value: U, weights: &Layer<W>, output: &mut Self)
     where
         T: Add<X, Output = T>,
         U: Copy,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        let l_w = weights.len();
-
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i + weights[i % l_w] * value;
-        }
+        self.map2(weights, output, |s_i, w_i| s_i + w_i * value);
     }
 
-    /// $O_i = S_i - W_{i \mod L_W} v$
+    /// $O_i = S_i - W_i v$
+    ///
+    /// `sub_scalar_term` in Tectonics.js.
     pub fn sub_value_weighted<U, W, X>(&self, weights: &Layer<W>, value: U, output: &mut Self)
     where
         T: Sub<X, Output = T>,
         W: Copy + Default + Mul<U, Output = X>,
         U: Copy,
     {
-        let l_w = weights.len();
-
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i - weights[i % l_w] * value;
-        }
+        self.map2(weights, output, |s_i, w_i| s_i - w_i * value);
     }
 
     // $O_i = v S_i$
@@ -689,9 +668,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Mul<U, Output = T>,
         U: Copy,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i * value;
-        }
+        self.map1(output, |s_i| s_i * value);
     }
 
     // $O_i = \frac{S_i}{v}$
@@ -700,9 +677,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Div<U, Output = T>,
         U: Copy,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i / value;
-        }
+        self.map1(output, |s_i| s_i / value);
     }
 
     // $O_i = S_i + v$
@@ -711,9 +686,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i + value;
-        }
+        self.map1(output, |s_i| s_i + value);
     }
 
     // $O_i = S_i - v$
@@ -722,9 +695,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        for (i, &s_i) in self.iter().enumerate() {
-            output[i] = s_i - value;
-        }
+        self.map1(output, |s_i| s_i - value);
     }
 
     // $O_i = S_i^v$
@@ -733,9 +704,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Power<U, Output = T>,
         U: Copy,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.power(value);
-        }
+        self.map1(output, |s_i| s_i.power(value));
     }
 
     /// $O_i = S_i \cdot v$
@@ -744,9 +713,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Dot<Output = U>,
         U: Copy + Default,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.dot(value);
-        }
+        self.map1(output, |s_i| s_i.dot(value));
     }
 
     /// $O_i = \frac{S_i \cdot v}{\sqrt{|S_i||v|}}$
@@ -755,9 +722,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Similarity<Output = U>,
         U: Copy + Default,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.similarity(value);
-        }
+        self.map1(output, |s_i| s_i.similarity(value));
     }
     // endregion Layer ⋅ Value
 
@@ -767,9 +732,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Inv,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.inv();
-        }
+        self.map1(output, |s_i| s_i.inv());
     }
 
     /// $O_i = |S_i|$
@@ -778,36 +741,47 @@ impl<T: Default + Copy> Layer<T> {
         T: Magnitude<Output = U>,
         U: Copy + Default,
     {
-        for (i, s_i) in self.iter().enumerate() {
-            output[i] = s_i.magnitude();
-        }
+        self.map1(output, |s_i| s_i.magnitude());
     }
     // endregion Misc
     // endregion Field operations
 
     // region Raster graphics
     /// $O_i = \begin{cases}
-    ///     F_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     B_i, & \text{if}   & M_i = \texttt{true} \\
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
-    pub fn copy_into_selection(&self, copy_from: &Self, mask: &Layer<bool>, output: &mut Self) {
-        for (((i, &s_i), &f_i), &m_i) in self.iter().enumerate().zip(copy_from).zip(mask) {
-            output[i] = if m_i { f_i } else { s_i }
-        }
+    pub fn copy_into_selection(&self, layer_b: &Self, mask: &Layer<bool>, output: &mut Self) {
+        self.map3(layer_b, mask, output, |s_i, f_i, m_i| if m_i { f_i } else { s_i });
     }
 
     /// $O_i = \begin{cases}
-    ///     f,   & \text{if}   & M_i = \texttt{true} \\
+    ///     v,   & \text{if}   & M_i = \texttt{true} \\
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
-    pub fn fill_into_selection(&self, fill: T, mask: &Layer<bool>, output: &mut Self) {
-        for ((i, &s_i), &m_i) in self.iter().enumerate().zip(mask) {
-            output[i] = if m_i { fill } else { s_i }
-        }
+    pub fn fill_into_selection(&self, value: T, mask: &Layer<bool>, output: &mut Self) {
+        self.map2(mask, output, |s_i, m_i| if m_i { value } else { s_i });
     }
 
     // TODO:
     //     -   `flood_select` (requires grid)
     //     -   `image_segmentation` (requires grid)
     // endregion Raster graphics
+
+    // region Interpolations
+    // region Layer ⋅ Layer
+    // endregion Layer ⋅ Layer
+
+    // region Layer ⋅ Value
+    // endregion Layer ⋅ Value
+
+    // region Value ⋅ Layer
+    // endregion Value ⋅ Layer
+
+    // region Value ⋅ Value
+    // endregion Value ⋅ Value
+
+    // region Misc
+    // endregion Misc
+    // endregion Interpolations
 }

@@ -177,13 +177,13 @@ impl Transpose for M4 {
 
 /// Matrix inversion.
 impl Inv for M4 {
-    fn inv(&self) -> Self {
+    fn inv(self) -> Self {
         let Self {
             a: V4 { x: a, y: b, z: c, w: d },
             b: V4 { x: e, y: f, z: g, w: h },
             c: V4 { x: i, y: j, z: k, w: l },
             d: V4 { x: m, y: n, z: o, w: p },
-        } = *self;
+        } = self;
 
         let m_af = k * p - l * o;
         let m_ah = j * o - k * n;

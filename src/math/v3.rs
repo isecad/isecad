@@ -194,32 +194,32 @@ impl std::cmp::PartialOrd for V3 {
 impl Magnitude for V3 {
     type Output = f32;
 
-    fn magnitude_proportional(&self) -> Self::Output {
+    fn magnitude_proportional(self) -> Self::Output {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    fn magnitude(&self) -> Self::Output {
+    fn magnitude(self) -> Self::Output {
         f32::sqrt(self.magnitude_proportional())
     }
 }
 
 /// Numeric value of vector.
 impl ToNumeric<f32> for V3 {
-    fn to_numeric_proportional(&self) -> f32 {
+    fn into_numeric_proportional(self) -> f32 {
         self.magnitude_proportional()
     }
 
-    fn to_numeric(&self) -> f32 {
+    fn into_numeric(self) -> f32 {
         self.magnitude()
     }
 }
 
 /// Vector normalization.
 impl Normalize for V3 {
-    fn normalize(&self) -> Self {
+    fn normalize(self) -> Self {
         let mag = self.magnitude();
 
-        *self / if mag == 0.0 { 1.0 } else { mag }
+        self / if mag == 0.0 { 1.0 } else { mag }
     }
 }
 

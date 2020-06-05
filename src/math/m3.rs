@@ -167,12 +167,12 @@ impl Transpose for M3 {
 
 /// Matrix inversion.
 impl Inv for M3 {
-    fn inv(&self) -> Self {
+    fn inv(self) -> Self {
         let Self {
             a: V3 { x: a, y: b, z: c },
             b: V3 { x: d, y: e, z: f },
             c: V3 { x: g, y: h, z: i },
-        } = *self;
+        } = self;
 
         let m_a = e * i - h * f;
         let m_b = f * g - d * i;

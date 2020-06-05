@@ -221,7 +221,7 @@ impl<T: Default + Copy> Layer<T> {
         let mut max = T::default();
 
         for &s_i in self {
-            let numeric_proportional = s_i.to_numeric_proportional();
+            let numeric_proportional = s_i.into_numeric_proportional();
 
             if numeric_proportional < min_proportional {
                 min_proportional = numeric_proportional;
@@ -250,7 +250,7 @@ impl<T: Default + Copy> Layer<T> {
         let mut max_index = 0;
 
         for (i, &s_i) in self.iter().enumerate() {
-            let numeric_proportional = s_i.to_numeric_proportional();
+            let numeric_proportional = s_i.into_numeric_proportional();
 
             if numeric_proportional < min_proportional {
                 min_proportional = numeric_proportional;
@@ -305,8 +305,8 @@ impl<T: Default + Copy> Layer<T> {
     {
         let (from_lower, from_upper) = self.min_max();
 
-        let from_lower = from_lower.to_numeric();
-        let from_upper = from_upper.to_numeric();
+        let from_lower = from_lower.into_numeric();
+        let from_upper = from_upper.into_numeric();
 
         self.rescale_from_to_range(from_lower, from_upper, to_lower, to_upper, output);
     }
@@ -321,8 +321,8 @@ impl<T: Default + Copy> Layer<T> {
     {
         let (from_lower, from_upper) = self.min_max();
 
-        let from_lower = from_lower.to_numeric();
-        let from_upper = from_upper.to_numeric();
+        let from_lower = from_lower.into_numeric();
+        let from_upper = from_upper.into_numeric();
 
         let scaling_factor = (from_upper - from_lower).inv();
 
@@ -365,7 +365,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let (_, from_upper) = self.min_max();
 
-        let from_upper = from_upper.to_numeric();
+        let from_upper = from_upper.into_numeric();
 
         self.rescale_from_to(from_upper, to_upper, output);
     }
@@ -845,10 +845,9 @@ impl<T: Default + Copy> Layer<T> {
     }
 
     /// $O_i = \sqrt{S_i}$
-    pub fn sqrt(&self, output: &mut Layer<U>)
+    pub fn sqrt(&self, output: &mut Self)
     where
         T: SquareRoot,
-        U: Copy + Default,
     {
         self.map_1(output, T::square_root);
     }

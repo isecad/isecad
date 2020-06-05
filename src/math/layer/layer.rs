@@ -670,7 +670,67 @@ impl<T: Default + Copy> Layer<T> {
     }
     // endregion similarity
 
-    // region Layer ⋅ Layer
+    // region add
+    /// $O_i = S_i + v$
+    pub fn add_value<U>(&self, value: U, output: &mut Self)
+    where
+        T: Add<U, Output = T>,
+        U: Copy,
+    {
+        self.map_1_with(value, output, T::add);
+    }
+
+    /// $O_i = S_i + B_i$
+    pub fn add_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
+    where
+        T: Add<U, Output = T>,
+        U: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::add);
+    }
+    // endregion add
+
+    // region add_weighted
+    /// $O_i = S_i + W_i v$
+    ///
+    /// `add_scalar_term` in Tectonics.js.
+    pub fn add_value_weighted<U, W, X>(&self, value: U, weights: &Layer<W>, output: &mut Self)
+    where
+        T: Add<X, Output = T>,
+        U: Copy,
+        W: Copy + Default + Mul<U, Output = X>,
+    {
+        self.map_2(weights, output, |s_i, w_i| s_i + w_i * value);
+    }
+
+    /// $O_i = S_i + W_i B_i$
+    ///
+    /// `add_field_term` in Tectonics.js.
+    pub fn add_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
+    where
+        T: Add<X, Output = T>,
+        U: Copy + Default,
+        W: Copy + Default + Mul<U, Output = X>,
+    {
+        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
+    }
+    // endregion add_weighted
+
+    // region add_by_mask
+    /// $O_i = \begin{cases}
+    ///     S_i + v, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,     & \text{else} &                     \\
+    /// \end{cases}$
+    ///
+    /// `add_scalar_term` in Tectonics.js.
+    pub fn add_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
+    where
+        T: Add<U, Output = T>,
+        U: Copy,
+    {
+        self.map_2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
+    }
+
     /// $O_i = \begin{cases}
     ///     S_i + B_i, & \text{if}   & M_i = \texttt{true} \\
     ///     S_i,       & \text{else} &                     \\
@@ -688,31 +748,39 @@ impl<T: Default + Copy> Layer<T> {
     {
         self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
     }
+    // endregion add_by_mask
 
-    /// $O_i = \begin{cases}
-    ///     S_i - B_i, & \text{if}   & M_i = \texttt{true} \\
-    ///     S_i,       & \text{else} &                     \\
-    /// \end{cases}$
-    ///
-    /// `sub_field_term` in Tectonics.js.
-    pub fn sub_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
+    // region sub
+    /// $O_i = S_i + v$
+    pub fn sub_value<U>(&self, value: U, output: &mut Self)
+    where
+        T: Sub<U, Output = T>,
+        U: Copy,
+    {
+        self.map_1_with(value, output, T::sub);
+    }
+
+    /// $O_i = S_i + B_i$
+    pub fn sub_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
     where
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
+        self.map_2(layer_b, output, T::sub);
     }
+    // endregion sub
 
-    /// $O_i = S_i + W_i B_i$
+    // region sub_weighted
+    /// $O_i = S_i - W_i v$
     ///
-    /// `add_field_term` in Tectonics.js.
-    pub fn add_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
+    /// `sub_scalar_term` in Tectonics.js.
+    pub fn sub_value_weighted<U, W, X>(&self, weights: &Layer<W>, value: U, output: &mut Self)
     where
-        T: Add<X, Output = T>,
-        U: Copy + Default,
+        T: Sub<X, Output = T>,
         W: Copy + Default + Mul<U, Output = X>,
+        U: Copy,
     {
-        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
+        self.map_2(weights, output, |s_i, w_i| s_i - w_i * value);
     }
 
     /// $O_i = S_i - W_i B_i$
@@ -726,41 +794,9 @@ impl<T: Default + Copy> Layer<T> {
     {
         self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
     }
+    // endregion sub_weighted
 
-    /// $O_i = S_i + B_i$
-    pub fn add_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
-    where
-        T: Add<U, Output = T>,
-        U: Copy + Default,
-    {
-        self.map_2(layer_b, output, T::add);
-    }
-
-    /// $O_i = S_i - B_i$
-    pub fn sub_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
-    where
-        T: Sub<U, Output = T>,
-        U: Copy + Default,
-    {
-        self.map_2(layer_b, output, T::sub);
-    }
-    // endregion Layer ⋅ Layer
-
-    // region Layer ⋅ Value
-    /// $O_i = \begin{cases}
-    ///     S_i + v, & \text{if}   & M_i = \texttt{true} \\
-    ///     S_i,     & \text{else} &                     \\
-    /// \end{cases}$
-    ///
-    /// `add_scalar_term` in Tectonics.js.
-    pub fn add_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
-    where
-        T: Add<U, Output = T>,
-        U: Copy,
-    {
-        self.map_2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
-    }
-
+    // region sub_by_mask
     /// $O_i = \begin{cases}
     ///     S_i - v, & \text{if}   & M_i = \texttt{true} \\
     ///     S_i,     & \text{else} &                     \\
@@ -775,48 +811,20 @@ impl<T: Default + Copy> Layer<T> {
         self.map_2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
     }
 
-    /// $O_i = S_i + W_i v$
+    /// $O_i = \begin{cases}
+    ///     S_i - B_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,       & \text{else} &                     \\
+    /// \end{cases}$
     ///
-    /// `add_scalar_term` in Tectonics.js.
-    pub fn add_value_weighted<U, W, X>(&self, value: U, weights: &Layer<W>, output: &mut Self)
-    where
-        T: Add<X, Output = T>,
-        U: Copy,
-        W: Copy + Default + Mul<U, Output = X>,
-    {
-        self.map_2(weights, output, |s_i, w_i| s_i + w_i * value);
-    }
-
-    /// $O_i = S_i - W_i v$
-    ///
-    /// `sub_scalar_term` in Tectonics.js.
-    pub fn sub_value_weighted<U, W, X>(&self, weights: &Layer<W>, value: U, output: &mut Self)
-    where
-        T: Sub<X, Output = T>,
-        W: Copy + Default + Mul<U, Output = X>,
-        U: Copy,
-    {
-        self.map_2(weights, output, |s_i, w_i| s_i - w_i * value);
-    }
-
-    // $O_i = S_i + v$
-    pub fn add_value<U>(&self, value: U, output: &mut Self)
-    where
-        T: Add<U, Output = T>,
-        U: Copy,
-    {
-        self.map_1(output, |s_i| s_i + value);
-    }
-
-    // $O_i = S_i - v$
-    pub fn sub_value<U>(&self, value: U, output: &mut Self)
+    /// `sub_field_term` in Tectonics.js.
+    pub fn sub_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
     where
         T: Sub<U, Output = T>,
-        U: Copy,
+        U: Copy + Default,
     {
-        self.map_1(output, |s_i| s_i - value);
+        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
     }
-    // endregion Layer ⋅ Value
+    // endregion sub_by_mask
 
     // region Misc
     /// $O_i = S_i^{-1}$
@@ -835,6 +843,15 @@ impl<T: Default + Copy> Layer<T> {
     {
         self.map_1(output, T::magnitude);
     }
+
+    /// $O_i = \sqrt{S_i}$
+    pub fn sqrt(&self, output: &mut Layer<U>)
+    where
+        T: SquareRoot,
+        U: Copy + Default,
+    {
+        self.map_1(output, T::square_root);
+    }
     // endregion Misc
 
     // TODO:
@@ -845,8 +862,6 @@ impl<T: Default + Copy> Layer<T> {
     //  -   `divergence` (requires grid).
     //  -   `curl` (requires grid).
     //  -   `diffusion_by_{layer,value}` (requires grid).
-    //  -   `get_{in,outside_of}_{layer,value}_{layer,value}_range_mask`.
-    //  -   `sqrt` (requires trait).
     //  -   `hadamard_{layer,value}` (requires trait).
     //  -   `{add,sub}_{layer,value}` for vector ⋅ scalar (requires trait implementations for vectors).
     //  -   Entrywise counterparts for existing additive operations for vector ⋅ scalar (requires trait).

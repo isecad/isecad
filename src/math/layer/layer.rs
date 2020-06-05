@@ -56,33 +56,44 @@ impl<T: Default + Copy> Layer<T> {
         Self(vec.into_boxed_slice())
     }
 
-    pub fn map1<F, Z>(&self, output: &mut Layer<Z>, f: F)
+    pub fn map_1<F, U>(&self, output: &mut Layer<U>, f: F)
     where
-        F: Fn(T) -> Z,
-        Z: Copy + Default,
+        F: Fn(T) -> U,
+        U: Copy + Default,
     {
         for (i, &s_i) in self.iter().enumerate() {
             output[i] = f(s_i);
         }
     }
 
-    pub fn map2<F, U, Z>(&self, layer_b: &Layer<U>, output: &mut Layer<Z>, f: F)
+    pub fn map_1_with<F, U, W>(&self, value: U, output: &mut Layer<W>, f: F)
     where
-        F: Fn(T, U) -> Z,
+        F: Fn(T, U) -> W,
+        U: Copy,
+        W: Copy + Default,
+    {
+        for (i, &s_i) in self.iter().enumerate() {
+            output[i] = f(s_i, value);
+        }
+    }
+
+    pub fn map_2<F, U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>, f: F)
+    where
+        F: Fn(T, U) -> W,
         U: Copy + Default,
-        Z: Copy + Default,
+        W: Copy + Default,
     {
         for ((i, &s_i), &b_i) in self.iter().enumerate().zip(layer_b) {
             output[i] = f(s_i, b_i);
         }
     }
 
-    pub fn map3<F, U, W, Z>(&self, layer_b: &Layer<U>, layer_c: &Layer<W>, output: &mut Layer<Z>, f: F)
+    pub fn map_3<F, U, W, X>(&self, layer_b: &Layer<U>, layer_c: &Layer<W>, output: &mut Layer<X>, f: F)
     where
-        F: Fn(T, U, W) -> Z,
+        F: Fn(T, U, W) -> X,
         U: Copy + Default,
         W: Copy + Default,
-        Z: Copy + Default,
+        X: Copy + Default,
     {
         for (((i, &s_i), &b_i), &c_i) in self.iter().enumerate().zip(layer_b).zip(layer_c) {
             output[i] = f(s_i, b_i, c_i);
@@ -97,7 +108,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let mut new = Layer::new(self.len());
 
-        self.map1(&mut new, |s_i| s_i.into());
+        self.map_1(&mut new, T::into);
 
         new
     }
@@ -118,7 +129,7 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `output` — $O$ — the output layer to copy items into.
     pub fn swizzle(&self, mapping: &Layer<usize>, output: &mut Self) {
-        mapping.map1(output, |m_i| self[m_i]);
+        mapping.map_1(output, |m_i| self[m_i]);
     }
 
     /// $O_{M_i} = S_{M_i} + A_i$
@@ -274,7 +285,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = (to_upper - to_lower) / (from_upper - from_lower);
 
-        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor + to_lower);
+        self.map_1(output, |s_i| (s_i - from_lower) * scaling_factor + to_lower);
     }
 
     /// $O_i = \frac{u_t - l_t}{\max S - \min S} (S_i - \min S) + l_t$
@@ -315,7 +326,7 @@ impl<T: Default + Copy> Layer<T> {
 
         let scaling_factor = (from_upper - from_lower).inv();
 
-        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor);
+        self.map_1(output, |s_i| (s_i - from_lower) * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{u_f} S_i$
@@ -335,7 +346,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = to_upper / from_upper;
 
-        self.map1(output, |s_i| s_i * scaling_factor);
+        self.map_1(output, |s_i| s_i * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{\max S} S_i$
@@ -364,76 +375,302 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Normalize,
     {
-        self.map1(output, |s_i| s_i.normalize());
+        self.map_1(output, T::normalize);
     }
     // endregion Statistics
 
     // region Field operations
-    // region Layer ⋅ Layer
-    /// $O_i = \min(S_i, B_i)$
-    pub fn min_layer(self, layer_b: &Self, output: &mut Self)
+    // region min
+    /// $O_i = \min(S_i, v)$
+    fn min_value(&self, value: T, output: &mut Self)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| if s_i < b_i { s_i } else { b_i });
+        self.map_1_with(value, output, partial_min);
+    }
+
+    /// $O_i = \min(S_i, B_i)$
+    fn min_layer(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map_2(layer_b, output, partial_min);
+    }
+    // endregion min
+
+    // region max
+    /// $O_i = \max(S_i, v)$
+    fn max_value(&self, value: T, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map_1_with(value, output, partial_max);
     }
 
     /// $O_i = \max(S_i, B_i)$
-    pub fn max_layer(&self, layer_b: &Self, output: &mut Self)
+    fn max_layer(&self, layer_b: &Self, output: &mut Self)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| if s_i <= b_i { b_i } else { s_i });
+        self.map_2(layer_b, output, partial_max);
     }
+    // endregion max
 
-    /// $O_i = S_i < B_i$
-    pub fn get_lt_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    // region get_lt_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i < v \\
+    ///     \texttt{false}, & \text{else} &         \\
+    /// \end{cases}$
+    fn get_lt_value_mask(&self, value: T, output: &mut Layer<bool>)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i < b_i);
+        self.map_1_with(value, output, lt);
     }
 
-    /// $O_i = S_i > B_i$
-    pub fn get_gt_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i < B_i \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_lt_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i > b_i);
+        self.map_2(layer_b, output, lt);
     }
+    // endregion get_lt_mask
 
-    /// $O_i = S_i \le B_i$
-    pub fn get_le_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    // region get_le_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \le v \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_le_value_mask(&self, value: T, output: &mut Layer<bool>)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i <= b_i);
+        self.map_1_with(value, output, le);
     }
 
-    /// $O_i = S_i \ge B_i$
-    pub fn get_ge_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \le B_i \\
+    ///     \texttt{false}, & \text{else} &             \\
+    /// \end{cases}$
+    fn get_le_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
     where
         T: PartialOrd,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i >= b_i);
+        self.map_2(layer_b, output, le);
+    }
+    // endregion get_le_mask
+
+    // region get_gt_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i > v \\
+    ///     \texttt{false}, & \text{else} &         \\
+    /// \end{cases}$
+    fn get_gt_value_mask(&self, value: T, output: &mut Layer<bool>)
+    where
+        T: PartialOrd,
+    {
+        self.map_1_with(value, output, gt);
     }
 
-    /// $O_i = S_i = B_i$
-    pub fn get_eq_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i > B_i \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_gt_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    where
+        T: PartialOrd,
+    {
+        self.map_2(layer_b, output, gt);
+    }
+    // endregion get_gt_mask
+
+    // region get_ge_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \ge v \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_ge_value_mask(&self, value: T, output: &mut Layer<bool>)
+    where
+        T: PartialOrd,
+    {
+        self.map_1_with(value, output, ge);
+    }
+
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \ge B_i \\
+    ///     \texttt{false}, & \text{else} &             \\
+    /// \end{cases}$
+    fn get_ge_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    where
+        T: PartialOrd,
+    {
+        self.map_2(layer_b, output, ge);
+    }
+    // endregion get_ge_mask
+
+    // region get_eq_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i = v \\
+    ///     \texttt{false}, & \text{else} &         \\
+    /// \end{cases}$
+    fn get_eq_value_mask(&self, value: T, output: &mut Layer<bool>)
     where
         T: PartialEq,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i == b_i);
+        self.map_1_with(value, output, eq);
     }
 
-    /// $O_i = S_i \ne B_i$
-    pub fn get_ne_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i = B_i \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_eq_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
     where
         T: PartialEq,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i != b_i);
+        self.map_2(layer_b, output, eq);
+    }
+    // endregion get_eq_mask
+
+    // region get_ne_mask
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \ne v \\
+    ///     \texttt{false}, & \text{else} &           \\
+    /// \end{cases}$
+    fn get_ne_value_mask(&self, value: T, output: &mut Layer<bool>)
+    where
+        T: PartialEq,
+    {
+        self.map_1_with(value, output, ne);
     }
 
+    /// $O_i = \begin{cases}
+    ///     \texttt{true},  & \text{if}   & S_i \ne B_i \\
+    ///     \texttt{false}, & \text{else} &             \\
+    /// \end{cases}$
+    fn get_ne_layer_mask(&self, layer_b: &Self, output: &mut Layer<bool>)
+    where
+        T: PartialEq,
+    {
+        self.map_2(layer_b, output, ne);
+    }
+    // endregion get_ne_mask
+
+    // region mul
+    /// $O_i = S_i v$
+    fn mul_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Mul<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::mul);
+    }
+
+    /// $O_i = S_i B_i$
+    fn mul_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Mul<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::mul);
+    }
+    // endregion mul
+
+    // region div
+    /// $O_i = \frac{S_i}{v}$
+    fn div_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Div<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::div);
+    }
+
+    /// $O_i = \frac{S_i}{B_i}$
+    fn div_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Div<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::div);
+    }
+    // endregion div
+
+    // region power
+    /// $O_i = S_i^v$
+    fn power_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Power<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::power);
+    }
+
+    /// $O_i = S_i^{B_i}$
+    fn power_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Power<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::power);
+    }
+    // endregion power
+
+    // region dot
+    /// $O_i = S_i \cdot v$
+    fn dot_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Dot<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::dot);
+    }
+
+    /// $O_i = S_i \cdot B_i$
+    fn dot_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Dot<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::dot);
+    }
+    // endregion dot
+
+    // region similarity
+    /// $O_i = \frac{S_i \cdot v}{\sqrt{|S_i||v|}}$
+    fn similarity_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Similarity<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::similarity);
+    }
+
+    /// $O_i = \frac{S_i \cdot B_i}{\sqrt{|S_i||B_i|}}$
+    fn similarity_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + Similarity<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::similarity);
+    }
+    // endregion similarity
+
+    // region Layer ⋅ Layer
     /// $O_i = \begin{cases}
     ///     S_i + B_i, & \text{if}   & M_i = \texttt{true} \\
     ///     S_i,       & \text{else} &                     \\
@@ -449,7 +686,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
+        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -463,7 +700,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
+        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
     }
 
     /// $O_i = S_i + W_i B_i$
@@ -475,7 +712,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
+        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
     }
 
     /// $O_i = S_i - W_i B_i$
@@ -487,7 +724,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
+        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
     }
 
     /// $O_i = S_i + B_i$
@@ -496,7 +733,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i + b_i);
+        self.map_2(layer_b, output, T::add);
     }
 
     /// $O_i = S_i - B_i$
@@ -505,120 +742,11 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map2(layer_b, output, |s_i, b_i| s_i - b_i);
-    }
-
-    /// $O_i = S_i B_i$
-    pub fn mul_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
-    where
-        T: Mul<U, Output = T>,
-        U: Copy + Default,
-    {
-        self.map2(layer_b, output, |s_i, b_i| s_i * b_i);
-    }
-
-    /// $O_i = \frac{S_i}{B_i}$
-    pub fn div_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
-    where
-        T: Div<U, Output = T>,
-        U: Copy + Default,
-    {
-        self.map2(layer_b, output, |s_i, b_i| s_i / b_i);
-    }
-
-    // $O_i = S_i^{B_i}$
-    pub fn power_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
-    where
-        T: Power<U, Output = T>,
-        U: Copy + Default,
-    {
-        self.map2(layer_b, output, |s_i, b_i| s_i.power(b_i));
-    }
-
-    /// $O_i = S_i \cdot B_i$
-    pub fn dot_layer<U>(&self, layer_b: &Self, output: &mut Layer<U>)
-    where
-        T: Dot<Output = U>,
-        U: Copy + Default,
-    {
-        self.map2(layer_b, output, |s_i, b_i| s_i.dot(b_i));
-    }
-
-    /// $O_i = \frac{S_i \cdot B_i}{\sqrt{|S_i||B_i|}}$
-    pub fn similarity_layer<U>(&self, layer_b: &Self, output: &mut Layer<U>)
-    where
-        T: Similarity<Output = U>,
-        U: Copy + Default,
-    {
-        self.map2(layer_b, output, |s_i, b_i| s_i.similarity(b_i));
+        self.map_2(layer_b, output, T::sub);
     }
     // endregion Layer ⋅ Layer
 
     // region Layer ⋅ Value
-    /// $O_i = \min(S_i, s)$
-    pub fn cut_top(&self, value: T, output: &mut Self)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| if s_i < value { s_i } else { value });
-    }
-
-    /// $O_i = \max(S_i, s)$
-    pub fn cut_bottom(&self, value: T, output: &mut Self)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| if s_i > value { s_i } else { value });
-    }
-
-    /// $O_i = S_i < v$
-    pub fn get_lt_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| s_i < value);
-    }
-
-    /// $O_i = S_i > v$
-    pub fn get_gt_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| s_i > value);
-    }
-
-    /// $O_i = S_i \le v$
-    pub fn get_le_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| s_i <= value);
-    }
-
-    /// $O_i = S_i \ge v$
-    pub fn get_ge_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialOrd,
-    {
-        self.map1(output, |s_i| s_i >= value);
-    }
-
-    /// $O_i = S_i = v$
-    pub fn get_eq_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialEq,
-    {
-        self.map1(output, |s_i| s_i == value);
-    }
-
-    /// $O_i = S_i \ne v$
-    pub fn get_ne_value_mask(&self, value: T, output: &mut Layer<bool>)
-    where
-        T: PartialEq,
-    {
-        self.map1(output, |s_i| s_i != value);
-    }
-
     /// $O_i = \begin{cases}
     ///     S_i + v, & \text{if}   & M_i = \texttt{true} \\
     ///     S_i,     & \text{else} &                     \\
@@ -630,7 +758,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy,
     {
-        self.map2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
+        self.map_2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -644,7 +772,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        self.map2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
+        self.map_2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
     }
 
     /// $O_i = S_i + W_i v$
@@ -656,7 +784,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map2(weights, output, |s_i, w_i| s_i + w_i * value);
+        self.map_2(weights, output, |s_i, w_i| s_i + w_i * value);
     }
 
     /// $O_i = S_i - W_i v$
@@ -668,25 +796,7 @@ impl<T: Default + Copy> Layer<T> {
         W: Copy + Default + Mul<U, Output = X>,
         U: Copy,
     {
-        self.map2(weights, output, |s_i, w_i| s_i - w_i * value);
-    }
-
-    // $O_i = v S_i$
-    pub fn mul_value<U>(&self, value: U, output: &mut Self)
-    where
-        T: Mul<U, Output = T>,
-        U: Copy,
-    {
-        self.map1(output, |s_i| s_i * value);
-    }
-
-    // $O_i = \frac{S_i}{v}$
-    pub fn div_value<U>(&self, value: U, output: &mut Self)
-    where
-        T: Div<U, Output = T>,
-        U: Copy,
-    {
-        self.map1(output, |s_i| s_i / value);
+        self.map_2(weights, output, |s_i, w_i| s_i - w_i * value);
     }
 
     // $O_i = S_i + v$
@@ -695,7 +805,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy,
     {
-        self.map1(output, |s_i| s_i + value);
+        self.map_1(output, |s_i| s_i + value);
     }
 
     // $O_i = S_i - v$
@@ -704,34 +814,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        self.map1(output, |s_i| s_i - value);
-    }
-
-    // $O_i = S_i^v$
-    pub fn power_value<U>(&self, value: U, output: &mut Self)
-    where
-        T: Power<U, Output = T>,
-        U: Copy,
-    {
-        self.map1(output, |s_i| s_i.power(value));
-    }
-
-    /// $O_i = S_i \cdot v$
-    pub fn dot_value<U>(&self, value: T, output: &mut Layer<U>)
-    where
-        T: Dot<Output = U>,
-        U: Copy + Default,
-    {
-        self.map1(output, |s_i| s_i.dot(value));
-    }
-
-    /// $O_i = \frac{S_i \cdot v}{\sqrt{|S_i||v|}}$
-    pub fn similarity_value<U>(&self, value: T, output: &mut Layer<U>)
-    where
-        T: Similarity<Output = U>,
-        U: Copy + Default,
-    {
-        self.map1(output, |s_i| s_i.similarity(value));
+        self.map_1(output, |s_i| s_i - value);
     }
     // endregion Layer ⋅ Value
 
@@ -741,7 +824,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Inv,
     {
-        self.map1(output, |s_i| s_i.inv());
+        self.map_1(output, T::inv);
     }
 
     /// $O_i = |S_i|$
@@ -750,7 +833,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Magnitude<Output = U>,
         U: Copy + Default,
     {
-        self.map1(output, |s_i| s_i.magnitude());
+        self.map_1(output, T::magnitude);
     }
     // endregion Misc
 
@@ -775,7 +858,7 @@ impl<T: Default + Copy> Layer<T> {
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
     pub fn copy_into_selection(&self, layer_b: &Self, mask: &Layer<bool>, output: &mut Self) {
-        self.map3(layer_b, mask, output, |s_i, f_i, m_i| if m_i { f_i } else { s_i });
+        self.map_3(layer_b, mask, output, |s_i, f_i, m_i| if m_i { f_i } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -783,7 +866,7 @@ impl<T: Default + Copy> Layer<T> {
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
     pub fn fill_into_selection(&self, value: T, mask: &Layer<bool>, output: &mut Self) {
-        self.map2(mask, output, |s_i, m_i| if m_i { value } else { s_i });
+        self.map_2(mask, output, |s_i, m_i| if m_i { value } else { s_i });
     }
 
     // TODO:

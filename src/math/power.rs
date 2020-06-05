@@ -1,7 +1,7 @@
-pub trait Power<T = Self> {
+pub trait Power<Rhs = Self> {
     type Output;
 
-    fn power(self, rhs: T) -> Self::Output;
+    fn power(self, rhs: Rhs) -> Self::Output;
 }
 
 impl Power for f32 {

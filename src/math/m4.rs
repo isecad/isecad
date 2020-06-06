@@ -348,3 +348,17 @@ impl EntrywiseInv for M4 {
         }
     }
 }
+
+/// Entrywise matrix exponentiation.
+impl EntrywiseEX for M4 {
+    type Output = Self;
+
+    fn entrywise_e_x(self) -> Self::Output {
+        Self {
+            a: self.a.entrywise_e_x(),
+            b: self.b.entrywise_e_x(),
+            c: self.c.entrywise_e_x(),
+            d: self.d.entrywise_e_x(),
+        }
+    }
+}

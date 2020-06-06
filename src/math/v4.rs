@@ -29,6 +29,17 @@ impl Bounded for V4 {
     const MAX_BOUND: V4 = V4::new(f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND);
 }
 
+impl One for V4 {
+    fn one() -> Self {
+        Self {
+            x: 0.5,
+            y: 0.5,
+            z: 0.5,
+            w: 0.5,
+        }
+    }
+}
+
 /// Vector negation.
 impl std::ops::Neg for V4 {
     type Output = Self;
@@ -65,11 +76,38 @@ impl std::ops::AddAssign for V4 {
 }
 
 /// Vector ⋅ scalar addition.
+///
+/// # $(0, 0, 0, 0) + a$
+///
+/// To add a scalar to a zero vector, we’ll create new vector with equal components and with magnitude equal to given scalar.
+///
+/// If a scalar is negative, resulting vector components will be negative.
+///
+/// $(0, 0, 0, 0) + a = (\frac{a}{2}, \frac{a}{2}, \frac{a}{2}, \frac{a}{2})$
+///
+/// # $(x, y, z, w) + a$
+///
+/// To add a scalar to a non-zero vector, we’ll change it to make its magnitude equal $|(x, y, z, w)| + a$.
+///
+/// When a scalar is negative and its absolute value is greater than vector magnitude, resulting vector will be antiparallel to an original one.
+///
+/// $(x, y, z, w) + a = (\frac{x (l + a)}{l}, \frac{y (l + a)}{l}, \frac{z (l + a)}{l}, \frac{w (l + a)}{l})$, where $l = |(x, y, z, w)|$.
 impl std::ops::Add<f32> for V4 {
     type Output = Self;
 
     fn add(self, rhs: f32) -> Self::Output {
-        self.normalize() * f32::max(0.0, self.magnitude() + rhs)
+        let mag = self.magnitude();
+
+        if mag == 0.0 {
+            Self {
+                x: rhs * 0.5,
+                y: rhs * 0.5,
+                z: rhs * 0.5,
+                w: rhs * 0.5,
+            }
+        } else {
+            self * (mag + rhs) / mag
+        }
     }
 }
 
@@ -106,7 +144,7 @@ impl std::ops::Sub<f32> for V4 {
     type Output = Self;
 
     fn sub(self, rhs: f32) -> Self::Output {
-        self.normalize() * f32::max(0.0, self.magnitude() - rhs)
+        self + -rhs
     }
 }
 
@@ -311,6 +349,20 @@ impl EntrywiseInv for V4 {
 
     fn entrywise_inv(self) -> Self {
         Self::new(self.x.inv(), self.y.inv(), self.z.inv(), self.w.inv())
+    }
+}
+
+/// Entrywise vector exponentiation.
+impl EntrywiseEX for V4 {
+    type Output = Self;
+
+    fn entrywise_e_x(self) -> Self::Output {
+        Self {
+            x: self.x.e_x(),
+            y: self.y.e_x(),
+            z: self.z.e_x(),
+            w: self.w.e_x(),
+        }
     }
 }
 

@@ -39,3 +39,9 @@ pub trait EntrywiseInv {
 
     fn entrywise_inv(self) -> Self::Output;
 }
+
+pub trait EntrywiseEX {
+    type Output;
+
+    fn entrywise_e_x(self) -> Self::Output;
+}

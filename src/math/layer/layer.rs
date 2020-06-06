@@ -6,6 +6,7 @@ use std::collections::*;
 use std::hash::*;
 use std::ops::*;
 
+#[derive(Debug)]
 pub struct Layer<T>(Box<[T]>);
 
 impl<T> std::ops::Deref for Layer<T> {
@@ -22,7 +23,7 @@ impl<T> std::ops::DerefMut for Layer<T> {
     }
 }
 
-impl<'a, T: Default + Copy> IntoIterator for &'a Layer<T> {
+impl<'a, T: Copy + Default> IntoIterator for &'a Layer<T> {
     type Item = &'a T;
     type IntoIter = std::slice::Iter<'a, T>;
 
@@ -45,7 +46,7 @@ impl<'a, T: Default + Copy> IntoIterator for &'a Layer<T> {
 ///     -   $\min X$, $\max X$ — $\min(X_0 \mathellipsis X_n), \max(X_0 \mathellipsis X_n)$ — min and max values of $X$ layer.
 ///     -   $X_n$ — $X_{L_X - 1}$ — last element of $X$ layer.
 ///     -   $v$ — `value` — single-value operand of some operations.
-impl<T: Default + Copy> Layer<T> {
+impl<T: Copy + Default> Layer<T> {
     // region Core functionality
     /// Creates new layer of specified length.
     pub fn new(length: usize) -> Self {
@@ -56,7 +57,8 @@ impl<T: Default + Copy> Layer<T> {
         Self(vec.into_boxed_slice())
     }
 
-    pub fn map_1<F, U>(&self, output: &mut Layer<U>, f: F)
+    /// Applies a one-argument callback to each item of a layer, writes result of a callback to an output layer.
+    pub fn map1<F, U>(&self, output: &mut Layer<U>, f: F)
     where
         F: Fn(T) -> U,
         U: Copy + Default,
@@ -66,7 +68,8 @@ impl<T: Default + Copy> Layer<T> {
         }
     }
 
-    pub fn map_1_with<F, U, W>(&self, value: U, output: &mut Layer<W>, f: F)
+    /// Applies a two-argument callback to each item of a layer and given value, writes result of a callback to an output layer.
+    pub fn map1_with<F, U, W>(&self, value: U, output: &mut Layer<W>, f: F)
     where
         F: Fn(T, U) -> W,
         U: Copy,
@@ -77,7 +80,8 @@ impl<T: Default + Copy> Layer<T> {
         }
     }
 
-    pub fn map_2<F, U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>, f: F)
+    /// Applies a two-argument callback to each item of two layers, writes result of a callback to an output layer.
+    pub fn map2<F, U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>, f: F)
     where
         F: Fn(T, U) -> W,
         U: Copy + Default,
@@ -88,7 +92,8 @@ impl<T: Default + Copy> Layer<T> {
         }
     }
 
-    pub fn map_3<F, U, W, X>(&self, layer_b: &Layer<U>, layer_c: &Layer<W>, output: &mut Layer<X>, f: F)
+    /// Applies a three-argument callback to each item of three layers, writes result of a callback to an output layer.
+    pub fn map3<F, U, W, X>(&self, layer_b: &Layer<U>, layer_c: &Layer<W>, output: &mut Layer<X>, f: F)
     where
         F: Fn(T, U, W) -> X,
         U: Copy + Default,
@@ -108,7 +113,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let mut new = Layer::new(self.len());
 
-        self.map_1(&mut new, T::into);
+        self.map1(&mut new, T::into);
 
         new
     }
@@ -129,7 +134,7 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `mapping` — $M$ — the mapping layer.
     /// -   `output` — $O$ — the output layer to copy items into.
     pub fn swizzle(&self, mapping: &Layer<usize>, output: &mut Self) {
-        mapping.map_1(output, |m_i| self[m_i]);
+        mapping.map1(output, |m_i| self[m_i]);
     }
 
     /// $O_{M_i} = S_{M_i} + A_i$
@@ -169,6 +174,19 @@ impl<T: Default + Copy> Layer<T> {
     /// Current implementation uses the `[T]::copy_from_slice`, but in the future versions we will use WASM `memory.copy` instead.
     pub fn copy_into(&self, output: &mut Self) {
         output.copy_from_slice(self);
+    }
+
+    /// Unsafely converts an immutable layer reference to a mutable.
+    ///
+    /// May be used in calls like:
+    ///
+    /// ```
+    /// let mut layer = Layer::new(10);
+    ///
+    /// layer.add_value(1.0, layer.to_mut()); // Equivalent to `layer += 1.0`.
+    /// ```
+    pub fn to_mut(&self) -> &mut Self {
+        unsafe { std::mem::transmute_copy(&self) }
     }
     // endregion Core functionality
 
@@ -237,7 +255,7 @@ impl<T: Default + Copy> Layer<T> {
         (min, max)
     }
 
-    /// Returns indices of min and max elements.
+    /// $(\argmin S, \argmax S)$
     pub fn min_max_indices<U>(&self) -> (usize, usize)
     where
         T: ToNumeric<U>,
@@ -285,7 +303,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = (to_upper - to_lower) / (from_upper - from_lower);
 
-        self.map_1(output, |s_i| (s_i - from_lower) * scaling_factor + to_lower);
+        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor + to_lower);
     }
 
     /// $O_i = \frac{u_t - l_t}{\max S - \min S} (S_i - \min S) + l_t$
@@ -298,7 +316,7 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `to_lower` — $l_t$ — lower bound of new range.
     /// -   `to_upper` — $u_t$ — upper bound of new range.
     /// -   `output` — $O$ — the output layer to write result into.
-    pub fn rescale_to_range<U>(&self, to_lower: U, to_upper: U, output: &mut Layer<T>)
+    pub fn rescale_to_range<U>(&self, to_lower: U, to_upper: U, output: &mut Self)
     where
         T: Sub<U, Output = T> + Mul<U, Output = T> + Add<U, Output = T> + ToNumeric<U>,
         U: Copy + Sub<Output = U> + Div<Output = U> + PartialOrd + Bounded,
@@ -326,7 +344,7 @@ impl<T: Default + Copy> Layer<T> {
 
         let scaling_factor = (from_upper - from_lower).inv();
 
-        self.map_1(output, |s_i| (s_i - from_lower) * scaling_factor);
+        self.map1(output, |s_i| (s_i - from_lower) * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{u_f} S_i$
@@ -346,7 +364,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         let scaling_factor = to_upper / from_upper;
 
-        self.map_1(output, |s_i| s_i * scaling_factor);
+        self.map1(output, |s_i| s_i * scaling_factor);
     }
 
     /// $O_i = \frac{u_t}{\max S} S_i$
@@ -358,7 +376,7 @@ impl<T: Default + Copy> Layer<T> {
     /// -   `self` — $S$ — the source layer.
     /// -   `to_upper` — $u_t$ — upper bound of new range.
     /// -   `output` — $O$ — the output layer to write result into.
-    pub fn rescale_to<U>(&self, to_upper: U, output: &mut Layer<T>)
+    pub fn rescale_to<U>(&self, to_upper: U, output: &mut Self)
     where
         T: Mul<U, Output = T> + ToNumeric<U>,
         U: Copy + Div<Output = U> + PartialOrd + Bounded,
@@ -375,7 +393,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Normalize,
     {
-        self.map_1(output, T::normalize);
+        self.map1(output, T::normalize);
     }
     // endregion Statistics
 
@@ -386,7 +404,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, partial_min);
+        self.map1_with(value, output, partial_min);
     }
 
     /// $O_i = \min(S_i, B_i)$
@@ -394,7 +412,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, partial_min);
+        self.map2(layer_b, output, partial_min);
     }
     // endregion min
 
@@ -404,7 +422,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, partial_max);
+        self.map1_with(value, output, partial_max);
     }
 
     /// $O_i = \max(S_i, B_i)$
@@ -412,7 +430,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, partial_max);
+        self.map2(layer_b, output, partial_max);
     }
     // endregion max
 
@@ -425,7 +443,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, lt);
+        self.map1_with(value, output, lt);
     }
 
     /// $O_i = \begin{cases}
@@ -436,7 +454,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, lt);
+        self.map2(layer_b, output, lt);
     }
     // endregion get_lt_mask
 
@@ -449,7 +467,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, le);
+        self.map1_with(value, output, le);
     }
 
     /// $O_i = \begin{cases}
@@ -460,7 +478,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, le);
+        self.map2(layer_b, output, le);
     }
     // endregion get_le_mask
 
@@ -473,7 +491,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, gt);
+        self.map1_with(value, output, gt);
     }
 
     /// $O_i = \begin{cases}
@@ -484,7 +502,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, gt);
+        self.map2(layer_b, output, gt);
     }
     // endregion get_gt_mask
 
@@ -497,7 +515,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_1_with(value, output, ge);
+        self.map1_with(value, output, ge);
     }
 
     /// $O_i = \begin{cases}
@@ -508,7 +526,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialOrd,
     {
-        self.map_2(layer_b, output, ge);
+        self.map2(layer_b, output, ge);
     }
     // endregion get_ge_mask
 
@@ -521,7 +539,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        self.map_1_with(value, output, eq);
+        self.map1_with(value, output, eq);
     }
 
     /// $O_i = \begin{cases}
@@ -532,7 +550,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        self.map_2(layer_b, output, eq);
+        self.map2(layer_b, output, eq);
     }
     // endregion get_eq_mask
 
@@ -545,7 +563,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        self.map_1_with(value, output, ne);
+        self.map1_with(value, output, ne);
     }
 
     /// $O_i = \begin{cases}
@@ -556,7 +574,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: PartialEq,
     {
-        self.map_2(layer_b, output, ne);
+        self.map2(layer_b, output, ne);
     }
     // endregion get_ne_mask
 
@@ -564,21 +582,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = S_i v$
     fn mul_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + Mul<U, Output = W>,
+        T: Mul<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::mul);
+        self.map1_with(value, output, T::mul);
     }
 
     /// $O_i = S_i B_i$
     fn mul_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + Mul<U, Output = W>,
+        T: Mul<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::mul);
+        self.map2(layer_b, output, T::mul);
     }
     // endregion mul
 
@@ -586,21 +604,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = \frac{S_i}{v}$
     fn div_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + Div<U, Output = W>,
+        T: Div<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::div);
+        self.map1_with(value, output, T::div);
     }
 
     /// $O_i = \frac{S_i}{B_i}$
     fn div_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + Div<U, Output = W>,
+        T: Div<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::div);
+        self.map2(layer_b, output, T::div);
     }
     // endregion div
 
@@ -608,21 +626,30 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = S_i^v$
     fn pow_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + Power<U, Output = W>,
+        T: Power<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::power);
+        self.map1_with(value, output, T::power);
+    }
+
+    /// $O_i = v^{S_i}$
+    fn exp_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        U: Copy + Power<T, Output = W>,
+        W: Copy + Default,
+    {
+        self.map1(output, |s_i| value.power(s_i));
     }
 
     /// $O_i = S_i^{B_i}$
     fn pow_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + Power<U, Output = W>,
+        T: Power<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::power);
+        self.map2(layer_b, output, T::power);
     }
     // endregion pow
 
@@ -630,21 +657,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = S_i \odot v$
     fn entrywise_mul_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywiseMul<U, Output = W>,
+        T: EntrywiseMul<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::entrywise_mul);
+        self.map1_with(value, output, T::entrywise_mul);
     }
 
     /// $O_i = S_i \odot B_i$
     fn entrywise_mul_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywiseMul<U, Output = W>,
+        T: EntrywiseMul<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::entrywise_mul);
+        self.map2(layer_b, output, T::entrywise_mul);
     }
     // endregion entrywise_mul
 
@@ -652,21 +679,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = S_i \oslash v$
     fn entrywise_div_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywiseDiv<U, Output = W>,
+        T: EntrywiseDiv<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::entrywise_div);
+        self.map1_with(value, output, T::entrywise_div);
     }
 
     /// $O_i = S_i \oslash B_i$
     fn entrywise_div_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywiseDiv<U, Output = W>,
+        T: EntrywiseDiv<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::entrywise_div);
+        self.map2(layer_b, output, T::entrywise_div);
     }
     // endregion entrywise_div
 
@@ -674,21 +701,30 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_{i_j} = S_{i_j}^v$
     fn entrywise_pow_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywisePow<U, Output = W>,
+        T: EntrywisePow<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::entrywise_pow);
+        self.map1_with(value, output, T::entrywise_pow);
+    }
+
+    /// $O_{i_j} = v^{S_{i_j}}$
+    fn entrywise_exp_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        U: Copy + EntrywisePow<T, Output = W>,
+        W: Copy + Default,
+    {
+        self.map1(output, |s_i| value.entrywise_pow(s_i));
     }
 
     /// $O_{i_j} = S_{i_j}^{B_{i_j}}$
     fn entrywise_pow_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + EntrywisePow<U, Output = W>,
+        T: EntrywisePow<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::entrywise_pow);
+        self.map2(layer_b, output, T::entrywise_pow);
     }
     // endregion entrywise_pow
 
@@ -696,21 +732,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = S_i \cdot v$
     fn dot_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + Dot<U, Output = W>,
+        T: Dot<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::dot);
+        self.map1_with(value, output, T::dot);
     }
 
     /// $O_i = S_i \cdot B_i$
     fn dot_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + Dot<U, Output = W>,
+        T: Dot<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::dot);
+        self.map2(layer_b, output, T::dot);
     }
     // endregion dot
 
@@ -718,21 +754,21 @@ impl<T: Default + Copy> Layer<T> {
     /// $O_i = \frac{S_i \cdot v}{\sqrt{|S_i||v|}}$
     fn similarity_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
-        T: Copy + Default + Similarity<U, Output = W>,
+        T: Similarity<U, Output = W>,
         U: Copy,
         W: Copy + Default,
     {
-        self.map_1_with(value, output, T::similarity);
+        self.map1_with(value, output, T::similarity);
     }
 
     /// $O_i = \frac{S_i \cdot B_i}{\sqrt{|S_i||B_i|}}$
     fn similarity_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
-        T: Copy + Default + Similarity<U, Output = W>,
+        T: Similarity<U, Output = W>,
         U: Copy + Default,
         W: Copy + Default,
     {
-        self.map_2(layer_b, output, T::similarity);
+        self.map2(layer_b, output, T::similarity);
     }
     // endregion similarity
 
@@ -743,7 +779,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy,
     {
-        self.map_1_with(value, output, T::add);
+        self.map1_with(value, output, T::add);
     }
 
     /// $O_i = S_i + B_i$
@@ -752,7 +788,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_2(layer_b, output, T::add);
+        self.map2(layer_b, output, T::add);
     }
     // endregion add
 
@@ -766,7 +802,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_2(weights, output, |s_i, w_i| s_i + w_i * value);
+        self.map2(weights, output, |s_i, w_i| s_i + w_i * value);
     }
 
     /// $O_i = S_i + W_i B_i$
@@ -778,7 +814,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i + w_i * b_i);
     }
     // endregion add_weighted
 
@@ -794,7 +830,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy,
     {
-        self.map_2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i + value } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -812,7 +848,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Add<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i + b_i } else { s_i });
     }
     // endregion add_by_mask
 
@@ -823,7 +859,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        self.map_1_with(value, output, T::sub);
+        self.map1_with(value, output, T::sub);
     }
 
     /// $O_i = S_i - B_i$
@@ -832,7 +868,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_2(layer_b, output, T::sub);
+        self.map2(layer_b, output, T::sub);
     }
     // endregion sub
 
@@ -846,7 +882,7 @@ impl<T: Default + Copy> Layer<T> {
         W: Copy + Default + Mul<U, Output = X>,
         U: Copy,
     {
-        self.map_2(weights, output, |s_i, w_i| s_i - w_i * value);
+        self.map2(weights, output, |s_i, w_i| s_i - w_i * value);
     }
 
     /// $O_i = S_i - W_i B_i$
@@ -858,7 +894,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i - w_i * b_i);
     }
     // endregion sub_weighted
 
@@ -874,7 +910,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy,
     {
-        self.map_2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i - value } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -888,7 +924,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Sub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i - b_i } else { s_i });
     }
     // endregion sub_by_mask
 
@@ -899,7 +935,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseAdd<U, Output = T>,
         U: Copy,
     {
-        self.map_1_with(value, output, T::entrywise_add);
+        self.map1_with(value, output, T::entrywise_add);
     }
 
     /// $O_i = S_i \oplus B_i$
@@ -908,7 +944,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseAdd<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_2(layer_b, output, T::entrywise_add);
+        self.map2(layer_b, output, T::entrywise_add);
     }
     // endregion entrywise_add
 
@@ -920,7 +956,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_2(weights, output, |s_i, w_i| s_i.entrywise_add(w_i * value));
+        self.map2(weights, output, |s_i, w_i| s_i.entrywise_add(w_i * value));
     }
 
     /// $O_i = S_i \oplus W_i B_i$
@@ -930,7 +966,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_add(w_i * b_i));
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_add(w_i * b_i));
     }
     // endregion entrywise_add_weighted
 
@@ -944,7 +980,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseAdd<U, Output = T>,
         U: Copy,
     {
-        self.map_2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_add(value) } else { s_i });
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_add(value) } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -956,7 +992,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseAdd<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_add(b_i) } else { s_i });
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_add(b_i) } else { s_i });
     }
     // endregion entrywise_add_by_mask
 
@@ -967,7 +1003,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseSub<U, Output = T>,
         U: Copy,
     {
-        self.map_1_with(value, output, T::entrywise_sub);
+        self.map1_with(value, output, T::entrywise_sub);
     }
 
     /// $O_i = S_i \ominus B_i$
@@ -976,7 +1012,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseSub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_2(layer_b, output, T::entrywise_sub);
+        self.map2(layer_b, output, T::entrywise_sub);
     }
     // endregion entrywise_sub
 
@@ -988,7 +1024,7 @@ impl<T: Default + Copy> Layer<T> {
         W: Copy + Default + Mul<U, Output = X>,
         U: Copy,
     {
-        self.map_2(weights, output, |s_i, w_i| s_i.entrywise_sub(w_i * value));
+        self.map2(weights, output, |s_i, w_i| s_i.entrywise_sub(w_i * value));
     }
 
     /// $O_i = S_i \ominus W_i B_i$
@@ -998,7 +1034,7 @@ impl<T: Default + Copy> Layer<T> {
         U: Copy + Default,
         W: Copy + Default + Mul<U, Output = X>,
     {
-        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_sub(w_i * b_i));
+        self.map3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_sub(w_i * b_i));
     }
     // endregion entrywise_sub_weighted
 
@@ -1012,7 +1048,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseSub<U, Output = T>,
         U: Copy,
     {
-        self.map_2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_sub(value) } else { s_i });
+        self.map2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_sub(value) } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -1024,7 +1060,7 @@ impl<T: Default + Copy> Layer<T> {
         T: EntrywiseSub<U, Output = T>,
         U: Copy + Default,
     {
-        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_sub(b_i) } else { s_i });
+        self.map3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_sub(b_i) } else { s_i });
     }
     // endregion entrywise_sub_by_mask
 
@@ -1035,7 +1071,7 @@ impl<T: Default + Copy> Layer<T> {
         T: Magnitude<Output = U>,
         U: Copy + Default,
     {
-        self.map_1(output, T::magnitude);
+        self.map1(output, T::magnitude);
     }
 
     /// $O_i = S_i^{-1}$
@@ -1043,7 +1079,7 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: Inv,
     {
-        self.map_1(output, T::inv);
+        self.map1(output, T::inv);
     }
 
     /// $O_i = \sqrt{S_i}$
@@ -1051,23 +1087,40 @@ impl<T: Default + Copy> Layer<T> {
     where
         T: SquareRoot,
     {
-        self.map_1(output, T::square_root);
+        self.map1(output, T::square_root);
+    }
+
+    /// $O_i = e^{S_i}$
+    pub fn e_x<U>(&self, output: &mut Layer<U>)
+    where
+        T: EX<Output = U>,
+        U: Copy + Default,
+    {
+        self.map1(output, T::e_x);
     }
 
     /// $O_{i_j} = S_{i_j}^{-1}$
     pub fn entrywise_inv(&self, output: &mut Self)
     where
-        T: EntrywiseInv,
+        T: EntrywiseInv<Output = T>,
     {
-        self.map_1(output, T::entrywise_inv);
+        self.map1(output, T::entrywise_inv);
     }
 
     /// $O_{i_j} = \sqrt{S_{i_j}}$
     pub fn entrywise_sqrt(&self, output: &mut Self)
     where
-        T: EntrywiseSqrt,
+        T: EntrywiseSqrt<Output = T>,
     {
-        self.map_1(output, T::entrywise_sqrt);
+        self.map1(output, T::entrywise_sqrt);
+    }
+
+    /// $O_{i_j} = e^{S_{i_j}}$
+    pub fn entrywise_e_x(&self, output: &mut Self)
+    where
+        T: EntrywiseEX<Output = T>,
+    {
+        self.map1(output, T::entrywise_e_x);
     }
     // endregion Misc
 
@@ -1087,7 +1140,7 @@ impl<T: Default + Copy> Layer<T> {
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
     pub fn copy_into_selection(&self, layer_b: &Self, mask: &Layer<bool>, output: &mut Self) {
-        self.map_3(layer_b, mask, output, |s_i, f_i, m_i| if m_i { f_i } else { s_i });
+        self.map3(layer_b, mask, output, |s_i, f_i, m_i| if m_i { f_i } else { s_i });
     }
 
     /// $O_i = \begin{cases}
@@ -1095,7 +1148,7 @@ impl<T: Default + Copy> Layer<T> {
     ///     S_i, & \text{else} &                     \\
     /// \end{cases}$
     pub fn fill_into_selection(&self, value: T, mask: &Layer<bool>, output: &mut Self) {
-        self.map_2(mask, output, |s_i, m_i| if m_i { value } else { s_i });
+        self.map2(mask, output, |s_i, m_i| if m_i { value } else { s_i });
     }
 
     // TODO:
@@ -1104,19 +1157,237 @@ impl<T: Default + Copy> Layer<T> {
     // endregion Raster graphics
 
     // region Interpolations
-    // region Layer ⋅ Layer
-    // endregion Layer ⋅ Layer
+    // region mix
+    // $O_i = S_i (w - v) + v$
+    pub fn mix_value_value(&self, v: T, w: T, output: &mut Self)
+    where
+        T: Mul<Output = T> + Add<Output = T> + Sub<Output = T>,
+    {
+        self.map1(output, |s_i| interpolations::mix(s_i, v, w))
+    }
 
-    // region Layer ⋅ Value
-    // endregion Layer ⋅ Value
+    // $O_i = S_i (C_i - v) + v$
+    pub fn mix_value_layer(&self, v: T, layer_c: &Self, output: &mut Self)
+    where
+        T: Mul<Output = T> + Add<Output = T> + Sub<Output = T>,
+    {
+        self.map2(layer_c, output, |s_i, c_i| interpolations::mix(s_i, v, c_i))
+    }
 
-    // region Value ⋅ Layer
-    // endregion Value ⋅ Layer
+    // $O_i = S_i (w - B_i) + B_i$
+    pub fn mix_layer_value(&self, layer_b: &Self, w: T, output: &mut Self)
+    where
+        T: Mul<Output = T> + Add<Output = T> + Sub<Output = T>,
+    {
+        self.map2(layer_b, output, |s_i, b_i| interpolations::mix(s_i, b_i, w))
+    }
 
-    // region Value ⋅ Value
-    // endregion Value ⋅ Value
+    // $O_i = S_i (C_i - B_i) + B_i$
+    pub fn mix_layer_layer(&self, layer_b: &Self, layer_c: &Self, output: &mut Self)
+    where
+        T: Mul<Output = T> + Add<Output = T> + Sub<Output = T>,
+    {
+        self.map3(layer_b, layer_c, output, |s_i, b_i, c_i| interpolations::mix(s_i, b_i, c_i))
+    }
+    // endregion mix
 
-    // region Misc
-    // endregion Misc
+    // region clamp
+    /// O_i = \begin{cases}
+    ///     v,   & \text{if}   & S_i < v \\
+    ///     w,   & \text{if}   & S_i > w \\
+    ///     S_i, & \text{else} &         \\
+    /// \end{cases}
+    pub fn clamp_value_value(&self, v: T, w: T, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map1(output, |s_i| interpolations::clamp(s_i, v, w))
+    }
+
+    /// O_i = \begin{cases}
+    ///     v,   & \text{if}   & S_i < v   \\
+    ///     C_i, & \text{if}   & S_i > C_i \\
+    ///     S_i, & \text{else} &           \\
+    /// \end{cases}
+    pub fn clamp_value_layer(&self, v: T, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map2(layer_c, output, |s_i, c_i| interpolations::clamp(s_i, v, c_i))
+    }
+
+    /// O_i = \begin{cases}
+    ///     B_i, & \text{if}   & S_i < B_i \\
+    ///     w,   & \text{if}   & S_i > w   \\
+    ///     S_i, & \text{else} &           \\
+    /// \end{cases}
+    pub fn clamp_layer_value(&self, layer_b: &Self, w: T, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map2(layer_b, output, |s_i, b_i| interpolations::clamp(s_i, b_i, w))
+    }
+
+    /// O_i = \begin{cases}
+    ///     B_i, & \text{if}   & S_i < B_i \\
+    ///     C_i, & \text{if}   & S_i > C_i \\
+    ///     S_i, & \text{else} &           \\
+    /// \end{cases}
+    pub fn clamp_layer_layer(&self, layer_b: &Self, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd,
+    {
+        self.map3(layer_b, layer_c, output, |s_i, b_i, c_i| interpolations::clamp(s_i, b_i, c_i))
+    }
+    // endregion clamp
+
+    // region step
+    /// $O_i = \begin{cases}
+    ///     1, & \text{if}   & S_i > v \\
+    ///     0, & \text{else} &         \\
+    /// \end{cases}$
+    pub fn step_value(&self, value: T, output: &mut Self)
+    where
+        T: PartialOrd + One,
+    {
+        self.map1_with(value, output, interpolations::step)
+    }
+
+    /// $O_i = \begin{cases}
+    ///     1, & \text{if}   & S_i > B_i \\
+    ///     0, & \text{else} &           \\
+    /// \end{cases}$
+    pub fn step_layer(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: PartialOrd + One,
+    {
+        self.map2(layer_b, output, interpolations::step)
+    }
+    // endregion step
+
+    // region linearstep
+    /// $O_i = \begin{cases}
+    ///     0,                   & \text{if}   & \frac{x - a}{b - a} < 0 \\
+    ///     1,                   & \text{if}   & \frac{x - a}{b - a} > 1 \\
+    ///     \frac{x - a}{b - a}, & \text{else} &                         \\
+    /// \end{cases}$
+    pub fn linearstep_value_value(&self, value_a: T, value_b: T, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Inv + One,
+    {
+        let inv_diff = (value_b - value_a).inv();
+
+        self.map1(output, |s_i| interpolations::linearstep_inv(s_i, value_a, inv_diff));
+    }
+
+    /// $O_i = \begin{cases}
+    ///     0,                     & \text{if}   & \frac{x - a}{C_i - a} < 0 \\
+    ///     1,                     & \text{if}   & \frac{x - a}{C_i - a} > 1 \\
+    ///     \frac{x - a}{C_i - a}, & \text{else} &                           \\
+    /// \end{cases}$
+    pub fn linearstep_value_layer(&self, value_a: T, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Inv + One,
+    {
+        self.map2(layer_c, output, |s_i, c_i| interpolations::linearstep(s_i, value_a, c_i));
+    }
+
+    /// $O_i = \begin{cases}
+    ///     0,                       & \text{if}   & \frac{x - B_i}{b - B_i} < 0 \\
+    ///     1,                       & \text{if}   & \frac{x - B_i}{b - B_i} > 1 \\
+    ///     \frac{x - B_i}{b - B_i}, & \text{else} &                             \\
+    /// \end{cases}$
+    pub fn linearstep_layer_value(&self, layer_b: &Self, value_b: T, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Inv + One,
+    {
+        self.map2(layer_b, output, |s_i, b_i| interpolations::linearstep(s_i, b_i, value_b));
+    }
+
+    /// $O_i = \begin{cases}
+    ///     0,                         & \text{if}   & \frac{x - B_i}{C_i - B_i} < 0 \\
+    ///     1,                         & \text{if}   & \frac{x - B_i}{C_i - B_i} > 1 \\
+    ///     \frac{x - B_i}{C_i - B_i}, & \text{else} &                               \\
+    /// \end{cases}$
+    pub fn linearstep_layer_layer(&self, layer_b: &Self, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Inv + One,
+    {
+        self.map3(layer_b, layer_c, output, |s_i, b_i, c_i| interpolations::linearstep(s_i, b_i, c_i));
+    }
+    // endregion linearstep
+
+    // region smoothstep
+    /// $O_i = l^2 (3 - 2l)$, where $l = \text{linearstep}(S_i, a, b)$
+    pub fn smoothstep_value_value(&self, value_a: T, value_b: T, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + Inv + One,
+    {
+        let inv_diff = (value_b - value_a).inv();
+
+        self.map1(output, |s_i| interpolations::smoothstep_inv(s_i, value_a, inv_diff));
+    }
+
+    /// $O_i = l^2 (3 - 2l)$, where $l = \text{linearstep}(S_i, a, C_i)$
+    pub fn smoothstep_value_layer(&self, value_a: T, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + Inv + One,
+    {
+        self.map2(layer_c, output, |s_i, c_i| interpolations::smoothstep(s_i, value_a, c_i));
+    }
+
+    /// $O_i = l^2 (3 - 2l)$, where $l = \text{linearstep}(S_i, B_i, b)$
+    pub fn smoothstep_layer_value(&self, layer_b: &Self, value_b: T, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + Inv + One,
+    {
+        self.map2(layer_b, output, |s_i, b_i| interpolations::smoothstep(s_i, b_i, value_b));
+    }
+
+    /// $O_i = l^2 (3 - 2l)$, where $l = \text{linearstep}(S_i, B_i, C_i)$
+    pub fn smoothstep_layer_layer(&self, layer_b: &Self, layer_c: &Self, output: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Sub<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + Inv + One,
+    {
+        self.map3(layer_b, layer_c, output, |s_i, b_i, c_i| interpolations::smoothstep(s_i, b_i, c_i));
+    }
+    // endregion smoothstep
+
+    // region smoothstep2
+    /// $\frac{2}{e^{-v S_i} + 1} - 1$
+    pub fn smoothstep2_value(&self, value: T, output: &mut Self)
+    where
+        T: Neg<Output = T> + Mul<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + EX<Output = T> + Inv,
+    {
+        let k_neg = -value;
+
+        self.map1_with(k_neg, output, interpolations::smoothstep2_neg);
+    }
+
+    /// $\frac{2}{e^{-B_i S_i} + 1} - 1$
+    pub fn smoothstep2_layer(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: Neg<Output = T> + Mul<Output = T> + Mul<f32, Output = T> + Add<f32, Output = T> + EX<Output = T> + Inv,
+    {
+        self.map2(layer_b, output, interpolations::smoothstep2);
+    }
+    // endregion smoothstep2
+
+    // region lerp
+    /// Linear piecewise interpolation by control points.
+    pub fn lerp(&self, xs: &[T], ys: &[T], output: &mut Self, temp1: &mut Self, temp2: &mut Self)
+    where
+        T: PartialOrd + Mul<Output = T> + Add<Output = T> + Sub<Output = T> + Inv + One,
+    {
+        temp2.fill(ys[0]);
+
+        for (i, &x_i) in xs[1..].iter().enumerate() {
+            self.linearstep_value_value(xs[i - 1], x_i, temp1);
+            temp1.mix_layer_value(temp2, ys[i], temp2.to_mut());
+        }
+
+        temp2.copy_into(output)
+    }
+    // endregion lerp
     // endregion Interpolations
 }

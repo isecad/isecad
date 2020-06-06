@@ -65,9 +65,7 @@ Writes result values to other layer.
 
 #### _mix_
 
-Applies a `mix`-like interpolation to each value of an F32 layer. While the
-`mix` interpolation uses the $x (1 - a) + y a$ formula, this one uses the
-$x + a (y - x)$ formula.
+Applies a `mix` interpolation to each value of an F32 layer.
 
 -   **Usage:** Few usages in crust and hydrosphere.
 -   **Frequency of the hottest usages:** Few times per plate per iteration.

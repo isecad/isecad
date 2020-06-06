@@ -299,3 +299,16 @@ impl EntrywiseInv for M3 {
         }
     }
 }
+
+/// Entrywise matrix exponentiation.
+impl EntrywiseEX for M3 {
+    type Output = Self;
+
+    fn entrywise_e_x(self) -> Self::Output {
+        Self {
+            a: self.a.entrywise_e_x(),
+            b: self.b.entrywise_e_x(),
+            c: self.c.entrywise_e_x(),
+        }
+    }
+}

@@ -30,6 +30,16 @@ impl Bounded for V3 {
     const MAX_BOUND: V3 = V3::new(f32::MAX_BOUND, f32::MAX_BOUND, f32::MAX_BOUND);
 }
 
+impl One for V3 {
+    fn one() -> Self {
+        Self {
+            x: 1.0 / f32::sqrt(3.0),
+            y: 1.0 / f32::sqrt(3.0),
+            z: 1.0 / f32::sqrt(3.0),
+        }
+    }
+}
+
 /// Vector negation.
 impl std::ops::Neg for V3 {
     type Output = Self;
@@ -64,11 +74,37 @@ impl std::ops::AddAssign for V3 {
 }
 
 /// Vector ⋅ scalar addition.
+///
+/// # $(0, 0, 0) + a$
+///
+/// To add a scalar to a zero vector, we’ll create new vector with equal components and with magnitude equal to given scalar.
+///
+/// If a scalar is negative, resulting vector components will be negative.
+///
+/// $(0, 0, 0) + a = (\frac{a}{\sqrt 3}, \frac{a}{\sqrt 3}, \frac{a}{\sqrt 3})$
+///
+/// # $(x, y, z) + a$
+///
+/// To add a scalar to a non-zero vector, we’ll change it to make its magnitude equal $|(x, y, z)| + a$.
+///
+/// When a scalar is negative and its absolute value is greater than vector magnitude, resulting vector will be antiparallel to an original one.
+///
+/// $(x, y, z) + a = (\frac{x (l + a)}{l}, \frac{y (l + a)}{l}, \frac{z (l + a)}{l})$, where $l = |(x, y, z)|$.
 impl std::ops::Add<f32> for V3 {
     type Output = Self;
 
     fn add(self, rhs: f32) -> Self::Output {
-        self.normalize() * f32::max(0.0, self.magnitude() + rhs)
+        let mag = self.magnitude();
+
+        if mag == 0.0 {
+            Self {
+                x: rhs * 0.57735026,
+                y: rhs * 0.57735026,
+                z: rhs * 0.57735026,
+            }
+        } else {
+            self * (mag + rhs) / mag
+        }
     }
 }
 
@@ -104,7 +140,7 @@ impl std::ops::Sub<f32> for V3 {
     type Output = Self;
 
     fn sub(self, rhs: f32) -> Self::Output {
-        self.normalize() * f32::max(0.0, self.magnitude() - rhs)
+        self + -rhs
     }
 }
 
@@ -349,6 +385,19 @@ impl EntrywiseInv for V3 {
 
     fn entrywise_inv(self) -> Self {
         Self::new(self.x.inv(), self.y.inv(), self.z.inv())
+    }
+}
+
+/// Entrywise vector exponentiation.
+impl EntrywiseEX for V3 {
+    type Output = Self;
+
+    fn entrywise_e_x(self) -> Self::Output {
+        Self {
+            x: self.x.e_x(),
+            y: self.y.e_x(),
+            z: self.z.e_x(),
+        }
     }
 }
 

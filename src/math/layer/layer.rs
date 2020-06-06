@@ -963,14 +963,6 @@ impl<T: Default + Copy> Layer<T> {
     // endregion entrywise_sub_by_mask
 
     // region Misc
-    /// $O_i = S_i^{-1}$
-    pub fn inv(&self, output: &mut Self)
-    where
-        T: Inv,
-    {
-        self.map_1(output, T::inv);
-    }
-
     /// $O_i = |S_i|$
     pub fn to_magnitudes<U>(&self, output: &mut Layer<U>)
     where
@@ -980,12 +972,36 @@ impl<T: Default + Copy> Layer<T> {
         self.map_1(output, T::magnitude);
     }
 
+    /// $O_i = S_i^{-1}$
+    pub fn inv(&self, output: &mut Self)
+    where
+        T: Inv,
+    {
+        self.map_1(output, T::inv);
+    }
+
     /// $O_i = \sqrt{S_i}$
     pub fn sqrt(&self, output: &mut Self)
     where
         T: SquareRoot,
     {
         self.map_1(output, T::square_root);
+    }
+
+    /// $O_{i_j} = S_{i_j}^{-1}$
+    pub fn entrywise_inv(&self, output: &mut Self)
+    where
+        T: EntrywiseInv,
+    {
+        self.map_1(output, T::entrywise_inv);
+    }
+
+    /// $O_{i_j} = \sqrt{S_{i_j}}$
+    pub fn entrywise_sqrt(&self, output: &mut Self)
+    where
+        T: EntrywiseSqrt,
+    {
+        self.map_1(output, T::entrywise_sqrt);
     }
     // endregion Misc
 

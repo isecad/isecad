@@ -626,6 +626,72 @@ impl<T: Default + Copy> Layer<T> {
     }
     // endregion pow
 
+    // region entrywise_mul
+    /// $O_i = S_i \odot v$
+    fn entrywise_mul_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywiseMul<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::entrywise_mul);
+    }
+
+    /// $O_i = S_i \odot B_i$
+    fn entrywise_mul_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywiseMul<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::entrywise_mul);
+    }
+    // endregion entrywise_mul
+
+    // region entrywise_div
+    /// $O_i = S_i \oslash v$
+    fn entrywise_div_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywiseDiv<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::entrywise_div);
+    }
+
+    /// $O_i = S_i \oslash B_i$
+    fn entrywise_div_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywiseDiv<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::entrywise_div);
+    }
+    // endregion entrywise_div
+
+    // region entrywise_pow
+    /// $O_{i_j} = S_{i_j}^v$
+    fn entrywise_pow_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywisePow<U, Output = W>,
+        U: Copy,
+        W: Copy + Default,
+    {
+        self.map_1_with(value, output, T::entrywise_pow);
+    }
+
+    /// $O_{i_j} = S_{i_j}^{B_{i_j}}$
+    fn entrywise_pow_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    where
+        T: Copy + Default + EntrywisePow<U, Output = W>,
+        U: Copy + Default,
+        W: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::entrywise_pow);
+    }
+    // endregion entrywise_pow
+
     // region dot
     /// $O_i = S_i \cdot v$
     fn dot_value<U, W>(&self, value: U, output: &mut Layer<W>)
@@ -1013,7 +1079,6 @@ impl<T: Default + Copy> Layer<T> {
     //  -   `divergence` (requires grid).
     //  -   `curl` (requires grid).
     //  -   `diffusion_by_{layer,value}` (requires grid).
-    //  -   `hadamard_{layer,value}` (requires trait).
     // endregion Field operations
 
     // region Raster graphics

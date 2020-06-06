@@ -63,6 +63,22 @@ impl std::ops::AddAssign for V3 {
     }
 }
 
+/// Vector ⋅ scalar addition.
+impl std::ops::Add<f32> for V3 {
+    type Output = Self;
+
+    fn add(self, rhs: f32) -> Self::Output {
+        self.normalize() * f32::max(0.0, self.magnitude() + rhs)
+    }
+}
+
+/// Vector ⋅ scalar addition with assignment.
+impl std::ops::AddAssign<f32> for V3 {
+    fn add_assign(&mut self, rhs: f32) {
+        *self = *self + rhs;
+    }
+}
+
 /// Vector subtraction.
 impl std::ops::Sub for V3 {
     type Output = Self;
@@ -83,8 +99,24 @@ impl std::ops::SubAssign for V3 {
     }
 }
 
+/// Vector ⋅ scalar subtraction.
+impl std::ops::Sub<f32> for V3 {
+    type Output = Self;
+
+    fn sub(self, rhs: f32) -> Self::Output {
+        self.normalize() * f32::max(0.0, self.magnitude() - rhs)
+    }
+}
+
+/// Vector ⋅ scalar subtraction with assignment.
+impl std::ops::SubAssign<f32> for V3 {
+    fn sub_assign(&mut self, rhs: f32) {
+        *self = *self - rhs;
+    }
+}
+
 /// Cross product.
-impl std::ops::Mul<Self> for V3 {
+impl std::ops::Mul for V3 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -97,7 +129,7 @@ impl std::ops::Mul<Self> for V3 {
 }
 
 /// Cross product with assignment.
-impl std::ops::MulAssign<Self> for V3 {
+impl std::ops::MulAssign for V3 {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
@@ -245,6 +277,78 @@ impl Similarity for V3 {
 
     fn similarity(self, other: Self) -> Self::Output {
         self.dot(other) / f32::sqrt(self.magnitude() * other.magnitude())
+    }
+}
+
+/// Entrywise vector ⋅ scalar addition.
+impl EntrywiseAdd<f32> for V3 {
+    type Output = Self;
+
+    fn entrywise_add(self, rhs: f32) -> Self {
+        Self::new(self.x + rhs, self.y + rhs, self.z + rhs)
+    }
+}
+
+/// Entrywise vector ⋅ scalar subtraction.
+impl EntrywiseSub<f32> for V3 {
+    type Output = Self;
+
+    fn entrywise_sub(self, rhs: f32) -> Self {
+        Self::new(self.x - rhs, self.y - rhs, self.z - rhs)
+    }
+}
+
+/// Entrywise vector ⋅ vector multiplication; i.e., Hadamard product.
+impl EntrywiseMul for V3 {
+    type Output = Self;
+
+    fn entrywise_mul(self, rhs: Self) -> Self {
+        Self::new(self.x * rhs.x, self.y * rhs.y, self.z * rhs.z)
+    }
+}
+
+/// Entrywise vector ⋅ vector division.
+impl EntrywiseDiv for V3 {
+    type Output = Self;
+
+    fn entrywise_div(self, rhs: Self) -> Self {
+        Self::new(self.x / rhs.x, self.y / rhs.y, self.z / rhs.z)
+    }
+}
+
+/// Entrywise vector ⋅ vector exponentiation.
+impl EntrywisePow for V3 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: Self) -> Self {
+        Self::new(self.x.power(rhs.x), self.y.power(rhs.y), self.z.power(rhs.z))
+    }
+}
+
+/// Entrywise vector ⋅ scalar exponentiation.
+impl EntrywisePow<f32> for V3 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: f32) -> Self {
+        Self::new(self.x.power(rhs), self.y.power(rhs), self.z.power(rhs))
+    }
+}
+
+/// Entrywise vector square root.
+impl EntrywiseSqrt for V3 {
+    type Output = Self;
+
+    fn entrywise_sqrt(self) -> Self {
+        Self::new(self.x.sqrt(), self.y.sqrt(), self.z.sqrt())
+    }
+}
+
+/// Entrywise vector inversion.
+impl EntrywiseInv for V3 {
+    type Output = Self;
+
+    fn entrywise_inv(self) -> Self {
+        Self::new(self.x.inv(), self.y.inv(), self.z.inv())
     }
 }
 

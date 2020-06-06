@@ -236,3 +236,115 @@ impl M4 {
         self.d.truncate()
     }
 }
+
+/// Entrywise matrix ⋅ scalar addition.
+impl EntrywiseAdd<f32> for M4 {
+    type Output = Self;
+
+    fn entrywise_add(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_add(rhs),
+            b: self.b.entrywise_add(rhs),
+            c: self.c.entrywise_add(rhs),
+            d: self.d.entrywise_add(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ scalar subtraction.
+impl EntrywiseSub<f32> for M4 {
+    type Output = Self;
+
+    fn entrywise_sub(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_sub(rhs),
+            b: self.b.entrywise_sub(rhs),
+            c: self.c.entrywise_sub(rhs),
+            d: self.d.entrywise_sub(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix multiplication; i.e., Hadamard product.
+impl EntrywiseMul for M4 {
+    type Output = Self;
+
+    fn entrywise_mul(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_mul(rhs.a),
+            b: self.b.entrywise_mul(rhs.b),
+            c: self.c.entrywise_mul(rhs.c),
+            d: self.d.entrywise_mul(rhs.d),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix division.
+impl EntrywiseDiv for M4 {
+    type Output = Self;
+
+    fn entrywise_div(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_div(rhs.a),
+            b: self.b.entrywise_div(rhs.b),
+            c: self.c.entrywise_div(rhs.c),
+            d: self.d.entrywise_div(rhs.d),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix exponentiation.
+impl EntrywisePow for M4 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_pow(rhs.a),
+            b: self.b.entrywise_pow(rhs.b),
+            c: self.c.entrywise_pow(rhs.c),
+            d: self.d.entrywise_pow(rhs.d),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ scalar exponentiation.
+impl EntrywisePow<f32> for M4 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_pow(rhs),
+            b: self.b.entrywise_pow(rhs),
+            c: self.c.entrywise_pow(rhs),
+            d: self.d.entrywise_pow(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix square root.
+impl EntrywiseSqrt for M4 {
+    type Output = Self;
+
+    fn entrywise_sqrt(self) -> Self {
+        Self {
+            a: self.a.entrywise_sqrt(),
+            b: self.b.entrywise_sqrt(),
+            c: self.c.entrywise_sqrt(),
+            d: self.d.entrywise_sqrt(),
+        }
+    }
+}
+
+/// Entrywise matrix inversion.
+impl EntrywiseInv for M4 {
+    type Output = Self;
+
+    fn entrywise_inv(self) -> Self {
+        Self {
+            a: self.a.entrywise_inv(),
+            b: self.b.entrywise_inv(),
+            c: self.c.entrywise_inv(),
+            d: self.d.entrywise_inv(),
+        }
+    }
+}

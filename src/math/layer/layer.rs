@@ -604,9 +604,9 @@ impl<T: Default + Copy> Layer<T> {
     }
     // endregion div
 
-    // region power
+    // region pow
     /// $O_i = S_i^v$
-    fn power_value<U, W>(&self, value: U, output: &mut Layer<W>)
+    fn pow_value<U, W>(&self, value: U, output: &mut Layer<W>)
     where
         T: Copy + Default + Power<U, Output = W>,
         U: Copy,
@@ -616,7 +616,7 @@ impl<T: Default + Copy> Layer<T> {
     }
 
     /// $O_i = S_i^{B_i}$
-    fn power_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
+    fn pow_layer<U, W>(&self, layer_b: &Layer<U>, output: &mut Layer<W>)
     where
         T: Copy + Default + Power<U, Output = W>,
         U: Copy + Default,
@@ -624,7 +624,7 @@ impl<T: Default + Copy> Layer<T> {
     {
         self.map_2(layer_b, output, T::power);
     }
-    // endregion power
+    // endregion pow
 
     // region dot
     /// $O_i = S_i \cdot v$
@@ -862,7 +862,6 @@ impl<T: Default + Copy> Layer<T> {
     //  -   `curl` (requires grid).
     //  -   `diffusion_by_{layer,value}` (requires grid).
     //  -   `hadamard_{layer,value}` (requires trait).
-    //  -   `{add,sub}_{layer,value}` for vector ⋅ scalar (requires trait implementations for vectors).
     //  -   Entrywise counterparts for existing additive operations for vector ⋅ scalar (requires trait).
     // endregion Field operations
 

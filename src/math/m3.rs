@@ -195,3 +195,107 @@ impl Inv for M3 {
         } / det
     }
 }
+
+/// Entrywise matrix ⋅ scalar addition.
+impl EntrywiseAdd<f32> for M3 {
+    type Output = Self;
+
+    fn entrywise_add(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_add(rhs),
+            b: self.b.entrywise_add(rhs),
+            c: self.c.entrywise_add(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ scalar subtraction.
+impl EntrywiseSub<f32> for M3 {
+    type Output = Self;
+
+    fn entrywise_sub(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_sub(rhs),
+            b: self.b.entrywise_sub(rhs),
+            c: self.c.entrywise_sub(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix multiplication; i.e., Hadamard product.
+impl EntrywiseMul for M3 {
+    type Output = Self;
+
+    fn entrywise_mul(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_mul(rhs.a),
+            b: self.b.entrywise_mul(rhs.b),
+            c: self.c.entrywise_mul(rhs.c),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix division.
+impl EntrywiseDiv for M3 {
+    type Output = Self;
+
+    fn entrywise_div(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_div(rhs.a),
+            b: self.b.entrywise_div(rhs.b),
+            c: self.c.entrywise_div(rhs.c),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ matrix exponentiation.
+impl EntrywisePow for M3 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: Self) -> Self {
+        Self {
+            a: self.a.entrywise_pow(rhs.a),
+            b: self.b.entrywise_pow(rhs.b),
+            c: self.c.entrywise_pow(rhs.c),
+        }
+    }
+}
+
+/// Entrywise matrix ⋅ scalar exponentiation.
+impl EntrywisePow<f32> for M3 {
+    type Output = Self;
+
+    fn entrywise_pow(self, rhs: f32) -> Self {
+        Self {
+            a: self.a.entrywise_pow(rhs),
+            b: self.b.entrywise_pow(rhs),
+            c: self.c.entrywise_pow(rhs),
+        }
+    }
+}
+
+/// Entrywise matrix square root.
+impl EntrywiseSqrt for M3 {
+    type Output = Self;
+
+    fn entrywise_sqrt(self) -> Self {
+        Self {
+            a: self.a.entrywise_sqrt(),
+            b: self.b.entrywise_sqrt(),
+            c: self.c.entrywise_sqrt(),
+        }
+    }
+}
+
+/// Entrywise matrix inversion.
+impl EntrywiseInv for M3 {
+    type Output = Self;
+
+    fn entrywise_inv(self) -> Self {
+        Self {
+            a: self.a.entrywise_inv(),
+            b: self.b.entrywise_inv(),
+            c: self.c.entrywise_inv(),
+        }
+    }
+}

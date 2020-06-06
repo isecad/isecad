@@ -1,6 +1,7 @@
 pub mod bounded;
 pub mod div_usize;
 pub mod dot;
+pub mod entrywise_ops;
 pub mod inv;
 pub mod layer;
 pub mod m3;
@@ -21,6 +22,7 @@ pub mod v4;
 pub use bounded::*;
 pub use div_usize::*;
 pub use dot::*;
+pub use entrywise_ops::*;
 pub use inv::*;
 pub use layer::*;
 pub use m3::*;

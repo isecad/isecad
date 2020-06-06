@@ -69,7 +69,7 @@ impl std::ops::Add<f32> for V4 {
     type Output = Self;
 
     fn add(self, rhs: f32) -> Self::Output {
-        self.normalize() * (self.magnitude() + rhs).abs()
+        self.normalize() * f32::max(0.0, self.magnitude() + rhs)
     }
 }
 
@@ -106,7 +106,7 @@ impl std::ops::Sub<f32> for V4 {
     type Output = Self;
 
     fn sub(self, rhs: f32) -> Self::Output {
-        self.normalize() * (self.magnitude() - rhs).abs()
+        self.normalize() * f32::max(0.0, self.magnitude() - rhs)
     }
 }
 

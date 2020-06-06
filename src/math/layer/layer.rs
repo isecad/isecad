@@ -751,7 +751,7 @@ impl<T: Default + Copy> Layer<T> {
     // endregion add_by_mask
 
     // region sub
-    /// $O_i = S_i + v$
+    /// $O_i = S_i - v$
     pub fn sub_value<U>(&self, value: U, output: &mut Self)
     where
         T: Sub<U, Output = T>,
@@ -760,7 +760,7 @@ impl<T: Default + Copy> Layer<T> {
         self.map_1_with(value, output, T::sub);
     }
 
-    /// $O_i = S_i + B_i$
+    /// $O_i = S_i - B_i$
     pub fn sub_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
     where
         T: Sub<U, Output = T>,
@@ -826,6 +826,142 @@ impl<T: Default + Copy> Layer<T> {
     }
     // endregion sub_by_mask
 
+    // region entrywise_add
+    /// $O_i = S_i \oplus v$
+    pub fn entrywise_add_value<U>(&self, value: U, output: &mut Self)
+    where
+        T: EntrywiseAdd<U, Output = T>,
+        U: Copy,
+    {
+        self.map_1_with(value, output, T::entrywise_add);
+    }
+
+    /// $O_i = S_i \oplus B_i$
+    pub fn entrywise_add_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
+    where
+        T: EntrywiseAdd<U, Output = T>,
+        U: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::entrywise_add);
+    }
+    // endregion entrywise_add
+
+    // region entrywise_add_weighted
+    /// $O_i = S_i \oplus W_i v$
+    pub fn entrywise_add_value_weighted<U, W, X>(&self, value: U, weights: &Layer<W>, output: &mut Self)
+    where
+        T: EntrywiseAdd<X, Output = T>,
+        U: Copy,
+        W: Copy + Default + Mul<U, Output = X>,
+    {
+        self.map_2(weights, output, |s_i, w_i| s_i.entrywise_add(w_i * value));
+    }
+
+    /// $O_i = S_i \oplus W_i B_i$
+    pub fn entrywise_add_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
+    where
+        T: EntrywiseAdd<X, Output = T>,
+        U: Copy + Default,
+        W: Copy + Default + Mul<U, Output = X>,
+    {
+        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_add(w_i * b_i));
+    }
+    // endregion entrywise_add_weighted
+
+    // region entrywise_add_by_mask
+    /// $O_i = \begin{cases}
+    ///     S_i \oplus v, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,          & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn entrywise_add_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
+    where
+        T: EntrywiseAdd<U, Output = T>,
+        U: Copy,
+    {
+        self.map_2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_add(value) } else { s_i });
+    }
+
+    /// $O_i = \begin{cases}
+    ///     S_i \oplus B_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,            & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn entrywise_add_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
+    where
+        T: EntrywiseAdd<U, Output = T>,
+        U: Copy + Default,
+    {
+        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_add(b_i) } else { s_i });
+    }
+    // endregion entrywise_add_by_mask
+
+    // region entrywise_sub
+    /// $O_i = S_i \ominus v$
+    pub fn entrywise_sub_value<U>(&self, value: U, output: &mut Self)
+    where
+        T: EntrywiseSub<U, Output = T>,
+        U: Copy,
+    {
+        self.map_1_with(value, output, T::entrywise_sub);
+    }
+
+    /// $O_i = S_i \ominus B_i$
+    pub fn entrywise_sub_layer<U>(&self, layer_b: &Layer<U>, output: &mut Self)
+    where
+        T: EntrywiseSub<U, Output = T>,
+        U: Copy + Default,
+    {
+        self.map_2(layer_b, output, T::entrywise_sub);
+    }
+    // endregion entrywise_sub
+
+    // region entrywise_sub_weighted
+    /// $O_i = S_i \ominus W_i v$
+    pub fn entrywise_sub_value_weighted<U, W, X>(&self, weights: &Layer<W>, value: U, output: &mut Self)
+    where
+        T: EntrywiseSub<X, Output = T>,
+        W: Copy + Default + Mul<U, Output = X>,
+        U: Copy,
+    {
+        self.map_2(weights, output, |s_i, w_i| s_i.entrywise_sub(w_i * value));
+    }
+
+    /// $O_i = S_i \ominus W_i B_i$
+    pub fn entrywise_sub_layer_weighted<U, W, X>(&self, layer_b: &Layer<U>, weights: &Layer<W>, output: &mut Self)
+    where
+        T: EntrywiseSub<X, Output = T>,
+        U: Copy + Default,
+        W: Copy + Default + Mul<U, Output = X>,
+    {
+        self.map_3(layer_b, weights, output, |s_i, b_i, w_i| s_i.entrywise_sub(w_i * b_i));
+    }
+    // endregion entrywise_sub_weighted
+
+    // region entrywise_sub_by_mask
+    /// $O_i = \begin{cases}
+    ///     S_i \ominus v, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,           & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn entrywise_sub_value_by_mask<U>(&self, value: U, mask: &Layer<bool>, output: &mut Self)
+    where
+        T: EntrywiseSub<U, Output = T>,
+        U: Copy,
+    {
+        self.map_2(mask, output, |s_i, m_i| if m_i { s_i.entrywise_sub(value) } else { s_i });
+    }
+
+    /// $O_i = \begin{cases}
+    ///     S_i \ominus B_i, & \text{if}   & M_i = \texttt{true} \\
+    ///     S_i,             & \text{else} &                     \\
+    /// \end{cases}$
+    pub fn entrywise_sub_layer_by_mask<U>(&self, layer_b: &Layer<U>, mask: &Layer<bool>, output: &mut Self)
+    where
+        T: EntrywiseSub<U, Output = T>,
+        U: Copy + Default,
+    {
+        self.map_3(layer_b, mask, output, |s_i, b_i, m_i| if m_i { s_i.entrywise_sub(b_i) } else { s_i });
+    }
+    // endregion entrywise_sub_by_mask
+
     // region Misc
     /// $O_i = S_i^{-1}$
     pub fn inv(&self, output: &mut Self)
@@ -862,7 +998,6 @@ impl<T: Default + Copy> Layer<T> {
     //  -   `curl` (requires grid).
     //  -   `diffusion_by_{layer,value}` (requires grid).
     //  -   `hadamard_{layer,value}` (requires trait).
-    //  -   Entrywise counterparts for existing additive operations for vector ⋅ scalar (requires trait).
     // endregion Field operations
 
     // region Raster graphics

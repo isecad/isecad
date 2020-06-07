@@ -185,8 +185,8 @@ impl<T: Copy + Default> Layer<T> {
     ///
     /// layer.add_value(1.0, layer.to_mut()); // Equivalent to `layer += 1.0`.
     /// ```
-    pub fn to_mut(&self) -> &mut Self {
-        unsafe { std::mem::transmute_copy(&self) }
+    pub unsafe fn to_mut(&self) -> &mut Self {
+        std::mem::transmute_copy(&self)
     }
     // endregion Core functionality
 
@@ -1082,6 +1082,14 @@ impl<T: Copy + Default> Layer<T> {
         self.map1(output, T::inv);
     }
 
+    /// $O_i = -S_i$
+    pub fn neg(&self, output: &mut Self)
+    where
+        T: Neg<Output = T>,
+    {
+        self.map1(output, T::neg);
+    }
+
     /// $O_i = \sqrt{S_i}$
     pub fn sqrt(&self, output: &mut Self)
     where
@@ -1383,7 +1391,10 @@ impl<T: Copy + Default> Layer<T> {
 
         for (i, &x_i) in xs[1..].iter().enumerate() {
             self.linearstep_value_value(xs[i - 1], x_i, temp1);
-            temp1.mix_layer_value(temp2, ys[i], temp2.to_mut());
+
+            unsafe {
+                temp1.mix_layer_value(temp2, ys[i], temp2.to_mut());
+            }
         }
 
         temp2.copy_into(output)

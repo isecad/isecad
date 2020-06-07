@@ -181,7 +181,7 @@ impl<T: Copy + Default> Layer<T> {
     /// May be used in calls like:
     ///
     /// ```
-    /// let mut layer = Layer::new(10);
+    /// let layer = &mut Layer::new(10);
     ///
     /// layer.add_value(1.0, layer.to_mut()); // Equivalent to `layer += 1.0`.
     /// ```
@@ -1390,10 +1390,10 @@ impl<T: Copy + Default> Layer<T> {
         temp2.fill(ys[0]);
 
         for (i, &x_i) in xs[1..].iter().enumerate() {
-            self.linearstep_value_value(xs[i - 1], x_i, temp1);
+            self.linearstep_value_value(xs[i], x_i, temp1);
 
             unsafe {
-                temp1.mix_layer_value(temp2, ys[i], temp2.to_mut());
+                temp1.mix_layer_value(temp2, ys[i + 1], temp2.to_mut());
             }
         }
 
@@ -1401,4 +1401,47 @@ impl<T: Copy + Default> Layer<T> {
     }
     // endregion lerp
     // endregion Interpolations
+
+    // region Morphology
+    /// $O_i = S_i \lor B_i$
+    pub fn union(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: BitOr<Output = T>,
+    {
+        self.map2(layer_b, output, T::bitor)
+    }
+
+    /// $O_i = S_i \land B_i$
+    pub fn intersection(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: BitAnd<Output = T>,
+    {
+        self.map2(layer_b, output, T::bitand)
+    }
+
+    /// $O_i = S_i \land \overline{B_i}$
+    pub fn difference(&self, layer_b: &Self, output: &mut Self)
+    where
+        T: BitAnd<Output = T> + Not<Output = T>,
+    {
+        self.map2(layer_b, output, |s_i, b_i| s_i & !b_i)
+    }
+
+    /// $O_i = \overline{S_i}$
+    pub fn not(&self, output: &mut Self)
+    where
+        T: Not<Output = T>,
+    {
+        self.map1(output, T::not);
+    }
+
+    // TODO:
+    //  -   `dilation` (requires grid).
+    //  -   `erosion` (requires grid).
+    //  -   `opening` (requires grid).
+    //  -   `closing` (requires grid).
+    //  -   `margin` (requires grid).
+    //  -   `padding` (requires grid).
+    //  -   `{white,black}_top_hat` (requires grid).
+    // endregion Morphology
 }

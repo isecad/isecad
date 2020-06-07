@@ -106,24 +106,6 @@ Writes result values to other layer.
 > -   **Possible implementations:** Any layer of bool-like type.
 > -   **Note:** Some of them May be straightforwardly parallelized.
 
-#### _union_
-
-Applies binary union to two layers.
-
--   **Status:** Unimplemented.
-
-#### _intersection_
-
-Applies binary intersection to two layers.
-
--   **Status:** Unimplemented.
-
-#### _difference_
-
-Applies binary difference to two layers.
-
--   **Status:** Unimplemented.
-
 #### _dilation_
 
 Applies binary dilation to two layers.
